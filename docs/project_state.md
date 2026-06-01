@@ -1,0 +1,717 @@
+# Project State
+
+This document is the handoff reference for continuing Irtiqa Intelligence development without prior chat history.
+
+## Current Architecture
+
+Irtiqa Intelligence is a production-grade lead intelligence platform in backend-foundation stage.
+
+Current architectural direction:
+
+- FastAPI application skeleton implemented.
+- Health endpoint implemented.
+- API router structure implemented.
+- FastAPI dependency injection setup implemented.
+- FastAPI CRUD API endpoint Phase 1 implemented for companies, contacts, and websites.
+- FastAPI CRUD API endpoint Phase 2 implemented for technologies, intent signals, and intelligence scores.
+- FastAPI CRUD API endpoint Phase 3 implemented for outreach messages and agent runs.
+- Workflow foundation implemented with context, result, state, policy, registry, and runner contracts.
+- Concrete `score_refresh` workflow implemented using deterministic persisted-data scoring.
+- FastAPI exception handlers integrated with the structured error hierarchy.
+- FastAPI lifespan startup/shutdown logging implemented.
+- SQLAlchemy ORM model layer implemented.
+- SQLite-first database setup implemented.
+- SQLite WAL mode and busy timeout implemented.
+- PostgreSQL compatibility planned through SQLAlchemy and Alembic.
+- Repository pattern implemented for database access.
+- Service layer implemented above repositories.
+- Pydantic v2 schema layer implemented for service and future API boundaries.
+- Testing foundation implemented for the current database layer.
+- Centralized structured logging implemented.
+- Structured error hierarchy implemented.
+- SQLite backup strategy documented.
+- Agent-based architecture documented, not implemented.
+- Frontend exists only as an empty top-level placeholder directory.
+
+Current top-level structure:
+
+```text
+Irtiqa-Intelligence/
+|-- AGENTS.md
+|-- README.md
+|-- pyproject.toml
+|-- alembic.ini
+|-- .env.example
+|-- .gitignore
+|-- app/
+|   |-- api/
+|   |-- core/
+|   |-- database/
+|   |-- models/
+|   |-- repositories/
+|   |-- schemas/
+|   `-- services/
+|-- database/
+|   `-- migrations/
+|-- docs/
+|   |-- agents.md
+|   |-- database.md
+|   |-- workflows.md
+|   `-- project_state.md
+|-- tests/
+|   |-- conftest.py
+|   |-- integration/
+|   `-- unit/
+|-- agents/
+|-- backend/
+|-- frontend/
+`-- prompts/
+```
+
+Important rule from `AGENTS.md`: do not create mock data or temporary solutions. Keep the architecture production-ready, modular, typed, logged, and error-aware.
+
+## Current Repository Status
+
+Current status:
+
+- Backend foundation is stable and tested.
+- Task 2, Core Logging Setup, is complete.
+- Task 3, Structured Error Handling, is complete.
+- Task 4, Database Hardening, is complete.
+- Task 5, SQLite Backup Strategy Documentation, is complete.
+- Task 6, Service Layer, is complete.
+- Task 7, Pydantic Schemas, is complete.
+- Task 8, FastAPI Skeleton, is complete.
+- Task 9, CRUD API Endpoints Phase 1, is complete for companies, contacts, and websites.
+- Task 9, CRUD API Endpoints Phase 2, is complete for technologies, intent signals, and intelligence scores.
+- Task 9, CRUD API Endpoints Phase 3, is complete for outreach messages and agent runs.
+- Task 10, Workflow Foundation Phase 1, is complete.
+- Phase 2 `score_refresh` workflow is complete.
+- Current full test suite result is `114 passed`.
+- Alembic schema drift check reports no new upgrade operations after upgrading to head.
+- Generated artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` should remain uncommitted.
+- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Jobs, scraping, frontend, and concrete agents have not been implemented.
+
+## Repository Health Summary
+
+Current health:
+
+- Foundation status: healthy.
+- Current test count: `114 passed`.
+- Schema drift status: clean after upgrading the local SQLite database to Alembic head.
+- Architecture status: FastAPI skeleton, Phase 1, Phase 2, and Phase 3 CRUD API routes, database, repositories, services, schemas, workflow foundation, `score_refresh`, logging, errors, and backup documentation are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; jobs, frontend, scraping, and concrete agents are intentionally not implemented yet.
+- Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
+- Next milestone: agent base interfaces.
+
+## Database Schema
+
+The implemented schema contains eight core tables:
+
+- `companies`
+- `contacts`
+- `websites`
+- `technologies`
+- `intent_signals`
+- `intelligence_scores`
+- `outreach_messages`
+- `agent_runs`
+
+Relationship summary:
+
+```text
+companies 1--many contacts
+companies 1--many websites
+companies 1--many technologies
+companies 1--many intent_signals
+companies 1--many intelligence_scores
+companies 1--many outreach_messages
+companies 1--many agent_runs
+
+contacts 1--many intent_signals
+contacts 1--many intelligence_scores
+contacts 1--many outreach_messages
+contacts 1--many agent_runs
+
+websites 1--many technologies
+websites 1--many intent_signals
+
+technologies 1--many intent_signals
+technologies 1--many intelligence_scores
+
+agent_runs 1--many technologies
+agent_runs 1--many intent_signals
+agent_runs 1--many intelligence_scores
+agent_runs 1--many outreach_messages
+
+intelligence_scores 1--many outreach_messages
+```
+
+Schema design choices:
+
+- UUIDs are stored as `String(36)` for SQLite compatibility.
+- Timestamps use SQLAlchemy `DateTime(timezone=True)`.
+- `created_at` and `updated_at` are shared through a timestamp mixin.
+- Foreign keys are configured with `CASCADE` or `SET NULL` depending on data ownership.
+- Indexes are defined on primary query fields and composite lookup paths.
+- Alembic migration revision `20260531_0001` creates the initial schema.
+- Alembic migration revision `20260531_0002` adds database hardening constraints.
+- SQLite connections enable foreign keys, WAL mode, and busy timeout through isolated engine configuration.
+- SQLite backup and restore procedures are documented in `docs/database.md`.
+- Confidence values are constrained from `0.0` to `1.0`.
+- Intent signal strength is constrained from `0.0` to `1.0`.
+- Intelligence score values are constrained from `0.0` to `100.0`.
+- Stable status values are constrained on `companies`, `contacts`, `agent_runs`, and `outreach_messages`.
+
+Reference docs:
+
+- `docs/database.md`
+- `database/migrations/versions/20260531_0001_initial_schema.py`
+- `database/migrations/versions/20260531_0002_database_hardening.py`
+
+## Implemented Components
+
+### Project Metadata
+
+Implemented:
+
+- `pyproject.toml`
+- `.gitignore`
+- `.env.example`
+- `README.md`
+
+Declared core dependencies:
+
+- `sqlalchemy`
+- `alembic`
+- `fastapi`
+- `uvicorn[standard]`
+- `pydantic-settings`
+- `python-dotenv`
+
+Optional dependency groups:
+
+- `dev`
+- `postgres`
+
+### Models
+
+Implemented SQLAlchemy models in `app/models/`:
+
+- `base.py`
+- `company.py`
+- `contact.py`
+- `website.py`
+- `technology.py`
+- `intent_signal.py`
+- `intelligence_score.py`
+- `outreach_message.py`
+- `agent_run.py`
+
+`app/models/__init__.py` exports all model classes and metadata.
+
+### Database Setup
+
+Implemented in `app/database/`:
+
+- `engine.py`
+- `session.py`
+- `__init__.py`
+
+Features:
+
+- SQLAlchemy engine factory.
+- SQLite `check_same_thread=False`.
+- SQLite foreign key PRAGMA enabled.
+- SQLite WAL mode PRAGMA configured.
+- SQLite busy timeout PRAGMA configured.
+- `SessionLocal`.
+- `session_scope()` context manager with commit, rollback, and close behavior.
+
+### Configuration
+
+Implemented in `app/core/config.py`.
+
+Supported environment variables:
+
+- `DATABASE_URL`
+- `DATABASE_ECHO`
+- `DATABASE_POOL_PRE_PING`
+- `SQLITE_FOREIGN_KEYS`
+- `SQLITE_JOURNAL_MODE`
+- `SQLITE_BUSY_TIMEOUT_MS`
+- `LOG_LEVEL`
+- `APP_LOG_LEVEL`
+- `DATABASE_LOG_LEVEL`
+- `REPOSITORY_LOG_LEVEL`
+- `LOG_CONSOLE_ENABLED`
+- `LOG_FILE_ENABLED`
+- `LOG_FILE_PATH`
+- `LOG_FILE_MAX_BYTES`
+- `LOG_FILE_BACKUP_COUNT`
+- `LOG_DATE_FORMAT`
+
+Default database URL:
+
+```text
+sqlite:///database/irtiqa.db
+```
+
+### Logging
+
+Implemented in `app/core/logging.py`.
+
+Features:
+
+- Centralized structured log configuration.
+- Application logger namespace: `irtiqa`.
+- Database logger namespace: `sqlalchemy.engine`.
+- Repository logger namespace: `irtiqa.repositories`.
+- Configurable application, database, repository, and root log levels.
+- Console logging.
+- Rotating file logging.
+- Timestamped key-value log format.
+- File log directory creation.
+- Idempotent reconfiguration through `logging.config.dictConfig`.
+
+### Errors
+
+Implemented in `app/core/errors.py`.
+
+Features:
+
+- Shared base `IrtiqaError`.
+- Stable error codes.
+- Human-readable messages.
+- Optional structured details.
+- Optional wrapped cause metadata.
+- Serializable `to_dict()` output.
+- Integrated error logging through centralized logging.
+- Database, repository, validation, service, workflow, future agent, configuration, and external integration exception categories.
+
+### API Skeleton
+
+Implemented in `app/main.py` and `app/api/`.
+
+Features:
+
+- FastAPI app factory through `create_app()`.
+- Module-level ASGI application instance for server startup.
+- Health endpoint at `/health`.
+- API router package structure under `app/api/`.
+- Dependency providers for application settings and SQLAlchemy sessions.
+- Service dependency providers for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
+- Exception handlers for `IrtiqaError`, FastAPI request validation errors, and unhandled exceptions.
+- Lifespan startup and shutdown logging using FastAPI lifespan events.
+- Runtime logging configuration during lifespan startup.
+
+### API Endpoints
+
+Implemented Phase 1, Phase 2, and Phase 3 CRUD routes:
+
+- `POST /companies`
+- `GET /companies`
+- `GET /companies/{company_id}`
+- `PATCH /companies/{company_id}`
+- `DELETE /companies/{company_id}`
+- `POST /contacts`
+- `GET /contacts`
+- `GET /contacts/{contact_id}`
+- `PATCH /contacts/{contact_id}`
+- `DELETE /contacts/{contact_id}`
+- `POST /websites`
+- `GET /websites`
+- `GET /websites/{website_id}`
+- `PATCH /websites/{website_id}`
+- `DELETE /websites/{website_id}`
+- `POST /technologies`
+- `GET /technologies`
+- `GET /technologies/{technology_id}`
+- `PATCH /technologies/{technology_id}`
+- `DELETE /technologies/{technology_id}`
+- `POST /intent-signals`
+- `GET /intent-signals`
+- `GET /intent-signals/{intent_signal_id}`
+- `PATCH /intent-signals/{intent_signal_id}`
+- `DELETE /intent-signals/{intent_signal_id}`
+- `POST /intelligence-scores`
+- `GET /intelligence-scores`
+- `GET /intelligence-scores/{intelligence_score_id}`
+- `PATCH /intelligence-scores/{intelligence_score_id}`
+- `DELETE /intelligence-scores/{intelligence_score_id}`
+- `POST /outreach-messages`
+- `GET /outreach-messages`
+- `GET /outreach-messages/{outreach_message_id}`
+- `PATCH /outreach-messages/{outreach_message_id}`
+- `DELETE /outreach-messages/{outreach_message_id}`
+- `POST /agent-runs`
+- `GET /agent-runs`
+- `GET /agent-runs/{agent_run_id}`
+- `PATCH /agent-runs/{agent_run_id}`
+- `DELETE /agent-runs/{agent_run_id}`
+
+Route conventions:
+
+- Routes depend on services, not repositories.
+- Routes reuse existing Pydantic schemas for request and response boundaries.
+- List endpoints return `items`, `total`, `limit`, and `offset`.
+- Structured API errors are returned through the existing FastAPI exception handlers.
+- Delete endpoints return `204 No Content`.
+
+### Workflow Foundation
+
+Implemented in `app/workflows/`:
+
+- `context.py`
+- `result.py`
+- `states.py`
+- `errors.py`
+- `policies.py`
+- `base.py`
+- `registry.py`
+- `runner.py`
+- `score_refresh.py`
+- `scoring_policy.py`
+
+Features:
+
+- Typed workflow context objects.
+- Structured workflow and workflow-step result objects.
+- Workflow status enum and transition validation.
+- Retry policy validation helpers.
+- Abstract workflow contract.
+- Workflow registry for stable workflow-name lookup.
+- Workflow runner with centralized logging and structured error conversion.
+- Deterministic `score_refresh.v1` workflow using persisted company, contact, technology, and intent signal records.
+- Append-only intelligence score creation with `agent_runs` observability.
+- Re-export of existing `WorkflowError` and `WorkflowStateError`.
+
+Current boundaries:
+
+- Workflows are designed to call services, never repositories.
+- Services remain transaction owners.
+- `score_refresh` is the first concrete workflow.
+- No agents, jobs, or external integrations are implemented.
+
+### Transaction Ownership Strategy
+
+Current decision:
+
+- Services own transaction boundaries.
+- API routes should call services, not repositories directly.
+- Repositories remain data-access only and never commit.
+- `session_scope()` is the canonical unit-of-work boundary for current service methods.
+- FastAPI route handlers should stay thin: validate request payloads with schemas, call services, and serialize responses.
+- The FastAPI `get_db_session()` dependency is available as low-level infrastructure, but it is not the default transaction boundary for CRUD routes while services own transactions.
+
+Evaluation:
+
+- Service-owned transactions match the current implementation of `BaseService`, which wraps each use-case operation in `session_scope()`.
+- Service-owned transactions keep API, future workflow, and future job callers consistent because all callers receive the same service behavior.
+- Service-owned transactions preserve repository isolation because repositories accept sessions but do not create, commit, or roll back sessions.
+- API-level transactions would require refactoring services to accept an injected session or unit-of-work. Introducing that now would duplicate transaction ownership and risk nested or conflicting session behavior.
+
+Guidance for Task 9:
+
+- Add FastAPI dependencies for service instances, such as `get_company_service()`, instead of injecting repositories into routes.
+- Do not wrap service calls in an API-level commit/rollback dependency.
+- Do not pass `get_db_session()` sessions into current services unless the service layer is intentionally refactored to support external unit-of-work ownership.
+- If a future workflow needs multiple service operations in one atomic transaction, introduce an explicit unit-of-work abstraction rather than quietly mixing API-level and service-level transactions.
+
+### Repositories
+
+Implemented in `app/repositories/`:
+
+- `base.py`
+- `company_repository.py`
+- `contact_repository.py`
+- `website_repository.py`
+- `technology_repository.py`
+- `intent_signal_repository.py`
+- `intelligence_score_repository.py`
+- `outreach_message_repository.py`
+- `agent_run_repository.py`
+
+Repository convention:
+
+- Repositories receive a SQLAlchemy `Session`.
+- Repositories do not commit transactions.
+- Transaction boundaries are currently controlled by services through `session_scope()`.
+
+### Services
+
+Implemented in `app/services/`:
+
+- `base.py`
+- `company_service.py`
+- `contact_service.py`
+- `website_service.py`
+- `technology_service.py`
+- `intent_signal_service.py`
+- `intelligence_score_service.py`
+- `outreach_message_service.py`
+- `agent_run_service.py`
+
+Service convention:
+
+- Services use repositories for data access.
+- Services own business-use-case boundaries above repositories.
+- Services use `session_scope()` for transaction safety.
+- Services are the default dependency boundary for future FastAPI CRUD routes.
+- Services support generic create, read, update, list, count, and delete operations.
+- Services use centralized logging through the `irtiqa.services` logger namespace.
+- Services use structured errors from `app/core/errors.py`.
+- Repositories remain data-access only and do not commit transactions.
+
+### Schemas
+
+Implemented Pydantic v2 schemas in `app/schemas/`:
+
+- `base.py`
+- `company.py`
+- `contact.py`
+- `website.py`
+- `technology.py`
+- `intent_signal.py`
+- `intelligence_score.py`
+- `outreach_message.py`
+- `agent_run.py`
+
+Schema convention:
+
+- Each current entity has `Create`, `Update`, `Read`, and `List` schemas.
+- Read schemas use `from_attributes=True` for ORM and future FastAPI response compatibility.
+- Create schemas validate required persistence fields before service calls.
+- Update schemas validate partial update payloads and reject empty update bodies.
+- List schemas include `items`, `total`, `limit`, and `offset`.
+- Status values and numeric ranges mirror current database constraints.
+
+### Migrations
+
+Implemented Alembic setup:
+
+- `alembic.ini`
+- `database/migrations/env.py`
+- `database/migrations/script.py.mako`
+- `database/migrations/versions/20260531_0001_initial_schema.py`
+- `database/migrations/versions/20260531_0002_database_hardening.py`
+
+### Tests
+
+Implemented pytest foundation in `tests/`:
+
+- `tests/conftest.py`
+- `tests/integration/test_database_hardening.py`
+- `tests/integration/api/test_app.py`
+- `tests/integration/api/test_crud_phase_1.py`
+- `tests/integration/api/test_crud_phase_2.py`
+- `tests/integration/api/test_crud_phase_3.py`
+- `tests/unit/workflows/test_context.py`
+- `tests/unit/workflows/test_result.py`
+- `tests/unit/workflows/test_states.py`
+- `tests/unit/workflows/test_policies.py`
+- `tests/unit/workflows/test_registry.py`
+- `tests/unit/workflows/test_runner.py`
+- `tests/unit/workflows/test_score_refresh.py`
+- `tests/unit/workflows/test_scoring_policy.py`
+- `tests/unit/core/test_errors.py`
+- `tests/unit/core/test_logging.py`
+- `tests/unit/test_models.py`
+- `tests/unit/test_schemas.py`
+- `tests/integration/test_migrations.py`
+- `tests/integration/test_repositories.py`
+- `tests/integration/test_score_refresh_workflow.py`
+- `tests/integration/test_services.py`
+- `tests/integration/test_session_scope.py`
+
+Coverage currently verifies:
+
+- Alembic migrations upgrade correctly.
+- Alembic migration version is recorded.
+- Migration-created columns match SQLAlchemy model metadata.
+- Migration downgrade removes application tables.
+- Model metadata contains the current schema.
+- Models include UUID primary keys and timestamps.
+- ORM relationships persist and load correctly.
+- All repository query methods work against SQLite.
+- Service create and query operations work against SQLite.
+- Service error handling returns structured errors.
+- Service transaction rollback works on database errors.
+- Pydantic schemas validate create and update payloads.
+- Pydantic read and list schemas serialize from ORM-compatible attributes.
+- Schema validation rejects invalid statuses, invalid numeric ranges, blank strings, and empty update payloads.
+- `session_scope()` commits on success.
+- `session_scope()` rolls back on exception.
+- Structured file logging works.
+- Console logging works.
+- Application, database, and repository log levels are configurable.
+- Logger factory names are stable.
+- Invalid log levels fail explicitly.
+- Logging configuration is idempotent.
+- Structured errors expose stable code, message, details, and string output.
+- Structured errors serialize to dictionaries.
+- Structured errors support contextual detail updates.
+- Required exception categories are represented in the hierarchy.
+- Error logging emits structured extra fields.
+- SQLite foreign keys, WAL mode, and busy timeout are configured.
+- Check constraints exist for status, confidence, strength, and score fields.
+- Status constraints are enforced.
+- Confidence and strength constraints are enforced.
+- Intelligence score range constraints are enforced.
+- FastAPI health endpoint returns service status.
+- FastAPI dependency overrides are supported.
+- FastAPI lifespan startup executes through `TestClient`.
+- FastAPI CRUD endpoints for companies, contacts, and websites support create, read, update, delete, and pagination-ready list responses.
+- FastAPI CRUD endpoints for technologies, intent signals, and intelligence scores support create, read, update, delete, and pagination-ready list responses.
+- FastAPI CRUD endpoints for outreach messages and agent runs support create, read, update, delete, and pagination-ready list responses.
+- FastAPI CRUD error responses use the structured error envelope for conflict, not found, and validation failures.
+- Workflow context validation rejects invalid workflow targets and options.
+- Workflow result objects serialize stable status, output, step, and error payloads.
+- Workflow state transition validation rejects invalid transitions with structured errors.
+- Workflow retry policies validate retry and backoff bounds.
+- Workflow registry registers, resolves, lists, and rejects invalid workflow definitions.
+- Workflow runner logs execution and returns structured results for success, structured errors, and unexpected failures.
+- `score_refresh.v1` scoring is deterministic, bounded, versioned, and evidence-only.
+- `score_refresh` appends intelligence scores, records agent run observability, and returns output ids.
+
+Last verified command:
+
+```text
+python -m pytest
+```
+
+Result:
+
+```text
+105 passed
+```
+
+Additional migration verification:
+
+```text
+python -m alembic upgrade head
+python -m alembic check
+```
+
+Result:
+
+```text
+No new upgrade operations detected.
+```
+
+Note: tests use isolated temporary SQLite databases. `database/irtiqa.db` remains a generated artifact and is ignored by `.gitignore`.
+
+## Completed Tasks
+
+Completed:
+
+- Designed architecture documentation.
+- Designed SQLite-first, PostgreSQL-compatible database schema.
+- Generated SQLAlchemy models for all current tables.
+- Generated Alembic initial migration.
+- Verified migration ran correctly against SQLite.
+- Implemented database engine and session management.
+- Implemented repository pattern.
+- Created project metadata and dependency manifest.
+- Created `.gitignore`.
+- Created `.env.example`.
+- Created `README.md`.
+- Updated stale documentation to match current schema.
+- Removed generated artifacts from the repository.
+- Added pytest setup and database test fixtures.
+- Added model tests.
+- Added migration tests.
+- Added repository tests.
+- Added `session_scope()` commit and rollback tests.
+- Added centralized structured logging.
+- Added logging configuration settings.
+- Added repository debug logging hooks.
+- Added logging tests.
+- Added production-ready structured error hierarchy.
+- Added structured error logging integration.
+- Added structured error tests.
+- Added SQLite WAL mode configuration.
+- Added SQLite busy timeout configuration.
+- Added portable database check constraints.
+- Added Alembic database hardening migration.
+- Added database hardening tests.
+- Documented local SQLite backup strategy.
+- Documented automated backup recommendations.
+- Documented SQLite restore procedure.
+- Documented WAL-specific backup considerations.
+- Documented backup order around migrations.
+- Documented SQLite-to-PostgreSQL migration backup considerations.
+- Added service layer above repositories.
+- Added service classes for all current entities.
+- Added service transaction boundaries through `session_scope()`.
+- Added service structured error handling and centralized logging.
+- Added service layer integration tests.
+- Added Pydantic v2 schema layer.
+- Added create, update, read, and list schemas for all current entities.
+- Added schema validation tests.
+- Added schema serialization tests.
+- Added FastAPI application factory.
+- Added API router structure.
+- Added health endpoint.
+- Added FastAPI dependency providers for settings and database sessions.
+- Added FastAPI exception handlers integrated with structured errors.
+- Added FastAPI lifespan startup and shutdown logging.
+- Added FastAPI health and startup tests.
+- Documented service-owned transaction strategy for future CRUD APIs.
+- Added service update and count support for CRUD API route behavior.
+- Added repository count support for pagination-ready list responses.
+- Added FastAPI service dependencies for companies, contacts, and websites.
+- Added CRUD API endpoints for companies, contacts, and websites.
+- Added FastAPI CRUD integration and error handling tests for companies, contacts, and websites.
+- Documented CRUD API Endpoints Phase 1 completion.
+- Added FastAPI service dependencies for technologies, intent signals, and intelligence scores.
+- Added CRUD API endpoints for technologies, intent signals, and intelligence scores.
+- Added FastAPI CRUD integration and error handling tests for technologies, intent signals, and intelligence scores.
+- Documented CRUD API Endpoints Phase 2 completion.
+- Added FastAPI service dependencies for outreach messages and agent runs.
+- Added CRUD API endpoints for outreach messages and agent runs.
+- Added FastAPI CRUD integration and error handling tests for outreach messages and agent runs.
+- Documented CRUD API Endpoints Phase 3 completion.
+- Completed the CRUD API milestone for all current persisted entities.
+- Added workflow foundation package.
+- Added workflow context, result, state, error, policy, registry, and runner contracts.
+- Added workflow foundation unit tests.
+- Documented Workflow Foundation Phase 1 completion.
+- Added deterministic `score_refresh.v1` scoring policy.
+- Added executable `score_refresh` workflow.
+- Added append-only score creation and `agent_runs` observability for `score_refresh`.
+- Added unit and integration tests for `score_refresh`.
+
+Documentation currently aligned with implemented schema:
+
+- `docs/database.md`
+- `docs/agents.md`
+- `docs/workflows.md`
+- `docs/project_state.md`
+- `docs/project_handoff.md`
+- `docs/codex_bootstrap.md`
+
+## Open Issues
+
+Known issues or gaps:
+
+- CRUD API routes currently exist for all current persisted entities: companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
+- Workflow foundation, runner, and `score_refresh` exist.
+- No agent implementation exists yet.
+- No CI configuration exists yet.
+- No Docker or deployment configuration exists yet.
+- No PostgreSQL runtime verification has been performed.
+- No repository methods enforce domain-level validation.
+- `technology_catalog` is not implemented; `technologies` currently stores company-specific detections directly.
+- There is no dedicated `workflow_runs` table; workflow state is expected to be inferred from `agent_runs` for now.
+- There is no dedicated evidence table. Current evidence references are stored directly on tables such as `websites`, `intent_signals.source_url`, summaries, and agent run summaries.
+
+## Recommended Next Steps
+
+Recommended order:
+
+1. Implement agent base interfaces after executable workflows are in place.
+2. Add background job foundation for long-running execution.
+3. Add PostgreSQL compatibility check using the `postgres` optional dependency.
+
+Do not begin agent implementation until the service layer, logging, error handling, and tests are established.
