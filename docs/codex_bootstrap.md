@@ -95,6 +95,13 @@ app/
     |-- intelligence_score_service.py
     |-- outreach_message_service.py
     `-- agent_run_service.py
+`-- agents/
+    |-- __init__.py
+    |-- base.py
+    |-- context.py
+    |-- result.py
+    |-- registry.py
+    `-- errors.py
 `-- schemas/
     |-- base.py
     |-- company.py
@@ -139,6 +146,11 @@ tests/
 |   |-- core/
 |   |   |-- test_errors.py
 |   |   `-- test_logging.py
+|   |-- agents/
+|   |   |-- test_context.py
+|   |   |-- test_result.py
+|   |   |-- test_registry.py
+|   |   `-- test_base.py
 |   |-- test_models.py
 |   `-- test_schemas.py
 `-- integration/
@@ -174,6 +186,7 @@ Completed:
 - Task 9: Full CRUD API milestone for all current persisted entities.
 - Task 10: Workflow Foundation Phase 1.
 - Phase 2: `score_refresh` workflow.
+- Task 11: Agent Interface Foundation.
 
 Implemented:
 
@@ -202,6 +215,8 @@ Implemented:
 - Workflow foundation.
 - Deterministic `score_refresh.v1` scoring policy.
 - Executable `score_refresh` workflow using existing persisted data.
+- Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, `AgentRegistry`.
+- Structured agent error hierarchy with `AgentValidationError`, `AgentNetworkError`, `AgentRateLimitError`, `AgentTimeoutError`.
 - Project metadata.
 - Documentation.
 - Pytest foundation.
@@ -209,7 +224,7 @@ Implemented:
 Not implemented:
 
 - Jobs.
-- Agents.
+- Concrete agents.
 - Scraping.
 - Frontend.
 - CI.
@@ -218,7 +233,7 @@ Latest known full test result:
 
 ```text
 python -m pytest
-114 passed
+143 passed
 ```
 
 Latest known migration verification:
@@ -234,12 +249,12 @@ No new upgrade operations detected.
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `114 passed`.
+- Current test count: `143 passed`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, database, repositories, services, schemas, workflow foundation, `score_refresh`, logging, errors, and backup documentation are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; jobs, frontend, scraping, and concrete agents are intentionally not implemented yet.
+- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, logging, errors, and backup documentation are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; jobs, frontend, scraping, and concrete agents are intentionally not implemented yet.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: agent base interfaces.
+- Next milestone: concrete agent implementation or background job foundation.
 
 ## Current Database Schema
 
@@ -431,20 +446,25 @@ Do not:
 Next recommended task:
 
 ```text
-Agent Base Interfaces
+Concrete Agent Implementation
 ```
 
 Recommended scope:
 
-- Add abstract agent contracts without concrete agent intelligence.
-- Use existing workflow and service boundaries.
-- Preserve structured logging and structured errors.
-- Add focused agent interface tests.
+- Implement the Intelligence Scoring Agent by subclassing `BaseAgent`.
+- Use the existing deterministic scoring policy from `score_refresh`.
+- Add focused agent tests.
 - Update `docs/agents.md`.
 - Update `docs/project_state.md`.
 - Update `docs/project_handoff.md`.
 
-Do not build jobs, scraping, frontend, or concrete agents in the next task unless the user explicitly overrides the roadmap.
+Alternative next task:
+
+```text
+Background Job Foundation
+```
+
+Do not build scraping, frontend, or external API calls in the next task unless the user explicitly overrides the roadmap.
 
 ## Reference Documents
 

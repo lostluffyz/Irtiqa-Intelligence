@@ -137,6 +137,28 @@ class AgentExecutionError(AgentError):
     default_message = "Agent execution failed."
 
 
+class AgentValidationError(AgentError):
+    default_code = "irtiqa.agent_validation_error"
+    default_message = "Agent input validation failed."
+    default_log_level = logging.WARNING
+
+
+class AgentNetworkError(AgentError):
+    default_code = "irtiqa.agent_network_error"
+    default_message = "An agent network operation failed."
+
+
+class AgentRateLimitError(AgentNetworkError):
+    default_code = "irtiqa.agent_rate_limit_error"
+    default_message = "Agent request was rate-limited."
+    default_log_level = logging.WARNING
+
+
+class AgentTimeoutError(AgentNetworkError):
+    default_code = "irtiqa.agent_timeout_error"
+    default_message = "Agent operation timed out."
+
+
 class ExternalIntegrationError(IrtiqaError):
     default_code = "irtiqa.external_integration_error"
     default_message = "An external integration failed."
@@ -146,6 +168,10 @@ __all__ = [
     "AgentConfigurationError",
     "AgentError",
     "AgentExecutionError",
+    "AgentNetworkError",
+    "AgentRateLimitError",
+    "AgentTimeoutError",
+    "AgentValidationError",
     "ConfigurationError",
     "DatabaseConnectionError",
     "DatabaseError",

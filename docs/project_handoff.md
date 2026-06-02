@@ -4,9 +4,9 @@ This document is the canonical handoff for Irtiqa Intelligence. It is written so
 
 ## 1. Current Repository Architecture
 
-Irtiqa Intelligence is currently in the backend foundation phase. The implemented work includes project metadata, database architecture, SQLAlchemy models, Pydantic schemas, Alembic migrations, SQLite session management, repository classes, service classes, centralized logging, structured errors, database hardening, SQLite backup strategy documentation, a FastAPI application skeleton, a health endpoint, CRUD API Endpoints Phase 1 for companies, contacts, and websites, CRUD API Endpoints Phase 2 for technologies, intent signals, and intelligence scores, CRUD API Endpoints Phase 3 for outreach messages and agent runs, workflow foundation, the concrete `score_refresh` workflow, and tests.
+Irtiqa Intelligence is currently in the backend foundation phase. The implemented work includes project metadata, database architecture, SQLAlchemy models, Pydantic schemas, Alembic migrations, SQLite session management, repository classes, service classes, centralized logging, structured errors, database hardening, SQLite backup strategy documentation, a FastAPI application skeleton, a health endpoint, CRUD API Endpoints Phase 1 for companies, contacts, and websites, CRUD API Endpoints Phase 2 for technologies, intent signals, and intelligence scores, CRUD API Endpoints Phase 3 for outreach messages and agent runs, workflow foundation, the concrete `score_refresh` workflow, Agent Interface Foundation, and tests.
 
-The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Jobs, scraping logic, frontend, and agent implementations do not exist yet.
+The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Jobs, scraping logic, frontend, and concrete agent implementations do not exist yet.
 
 Current repository layout:
 
@@ -63,6 +63,14 @@ Irtiqa-Intelligence/
 |       |-- intelligence_score_repository.py
 |       |-- outreach_message_repository.py
 |       `-- agent_run_repository.py
+|
+|-- app/agents/
+|   |-- __init__.py
+|   |-- base.py
+|   |-- context.py
+|   |-- result.py
+|   |-- registry.py
+|   `-- errors.py
 |
 |-- app/services/
 |   |-- __init__.py
@@ -388,7 +396,22 @@ Completed Workflow Foundation and score_refresh:
 - `score_refresh` records observability through `agent_runs` with `agent_name=score_refresh_policy`.
 - `score_refresh` returns created score ids through `WorkflowResult.output_ids["intelligence_scores"]`.
 - `score_refresh` raises structured `WorkflowError` failures and marks started agent runs as failed when execution fails.
-- No agents, jobs, scraping, or external APIs were introduced.
+- No concrete agents, jobs, scraping, or external APIs were introduced.
+
+Completed Agent Interface Foundation:
+
+- Added `app/agents/` package with `base.py`, `context.py`, `result.py`, `registry.py`, and `errors.py`.
+- Added async `BaseAgent` abstract class using the Template Method pattern with lifecycle hooks.
+- Added `AgentContext` Pydantic model with frozen options, required `company_id`, and optional `contact_id`.
+- Added `AgentResult` Pydantic model with structured output IDs, error envelopes, timing, and stats.
+- Added `AgentRegistry` for name-based agent class lookup with validation.
+- Added `AgentRunOutput` typed dictionary as the return type for `BaseAgent._run()`.
+- Extended `app/core/errors.py` with `AgentValidationError`, `AgentNetworkError`, `AgentRateLimitError`, and `AgentTimeoutError`.
+- Added `app/agents/errors.py` re-exporting all agent error classes.
+- Added agent interface unit tests for context, result, registry, and lifecycle.
+- Agents integrate with `AgentRunService` for `agent_runs` observability.
+- Agents use structured logging via `irtiqa.agents` namespace.
+- Agent Interface Foundation is production-ready. No concrete agents are implemented yet.
 
 Documented transaction ownership decision:
 
@@ -430,6 +453,7 @@ Completed testing foundation:
 - Added scoring policy unit tests for deterministic bounded `score_refresh.v1` scoring.
 - Added workflow unit tests for score creation, observability, result output ids, and structured failures.
 - Added integration tests proving `score_refresh` persists append-only scores and `agent_runs`.
+- Added agent interface context, result, registry, and lifecycle unit tests.
 
 Completed logging foundation:
 
@@ -481,7 +505,7 @@ python -m pytest
 Result:
 
 ```text
-114 passed
+143 passed
 ```
 
 Current test coverage verifies:
@@ -555,13 +579,13 @@ Important test behavior:
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `114 passed`.
+- Current test count: `143 passed`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; jobs, frontend, scraping, and concrete agents are intentionally not implemented yet.
-- Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, and `docs/workflows.md` reflect CRUD API completion, workflow foundation, and `score_refresh`.
+- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; jobs, frontend, scraping, and concrete agents are intentionally not implemented yet.
+- Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, and Agent Interface Foundation.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: agent base interfaces.
+- Next milestone: concrete agent implementation or background job foundation.
 
 ## 6. Repository Conventions
 
@@ -763,32 +787,44 @@ Completed roadmap item:
 - Full CRUD API milestone for all current persisted entities.
 - Workflow foundation.
 - `score_refresh` workflow.
+- Agent Interface Foundation.
 
 ## 10. Next Recommended Task
 
 The next recommended task is:
 
 ```text
-Agent Base Interfaces
+Concrete Agent Implementation
 ```
 
 Recommended scope:
 
-- Add abstract contracts for future agents.
-- Keep concrete agent intelligence out of scope.
-- Use existing workflow and service boundaries.
-- Preserve structured logging and structured errors.
-- Add focused agent interface unit tests.
+- Implement the Intelligence Scoring Agent by subclassing `BaseAgent`.
+- Use the existing deterministic scoring policy from `score_refresh`.
+- Add focused agent tests.
 - Update `docs/agents.md`.
 - Update `docs/project_state.md`.
 - Update `docs/project_handoff.md`.
-- Do not add jobs, scraping, frontend, or concrete agent implementations yet.
+- Do not add jobs, scraping, frontend, or external API calls yet.
 
-Why this is next:
+Alternative next task:
+
+```text
+Background Job Foundation
+```
+
+Recommended scope:
+
+- Add a job scheduling layer for long-running agent execution.
+- Integrate with existing workflow and agent foundations.
+- Do not add scraping, frontend, or external API calls yet.
+
+Why concrete agents or job foundation are next:
 
 - The full CRUD API milestone is implemented and tested.
 - Workflow foundation and `score_refresh` are implemented and tested.
-- Agent interfaces are the next boundary before background jobs and concrete agents.
+- Agent Interface Foundation is implemented and tested.
+- Concrete agents or job scheduling are the next boundaries.
 
 ## 11. Open Issues
 
@@ -797,7 +833,7 @@ Current known gaps:
 - CRUD API routes currently exist for all current persisted entities: companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
 - Workflow foundation, workflow runner, and `score_refresh` exist.
 - No job system exists yet.
-- No agent implementation exists yet.
+- Agent Interface Foundation is implemented but no concrete agent implementations exist yet.
 - No scraping implementation exists yet.
 - No frontend implementation exists yet.
 - No CI configuration exists yet.
@@ -826,29 +862,32 @@ Do not implement agents until the following are complete:
 
 Future agent sequence:
 
-### Phase 1: Agent Interfaces Only
+### Phase 1: Agent Interfaces Only (COMPLETED)
 
-Files likely affected:
+Implemented files:
 
 ```text
-app/agents/base/
-app/agents/base/agent.py
-app/agents/base/context.py
-app/agents/base/result.py
-app/agents/base/registry.py
-app/agents/base/exceptions.py
-tests/unit/agents/base/
-docs/agents.md
+app/agents/__init__.py
+app/agents/base.py
+app/agents/context.py
+app/agents/result.py
+app/agents/registry.py
+app/agents/errors.py
+tests/unit/agents/__init__.py
+tests/unit/agents/test_context.py
+tests/unit/agents/test_result.py
+tests/unit/agents/test_registry.py
+tests/unit/agents/test_base.py
 ```
 
-Goal:
+Completed:
 
-- Define contracts.
-- Define input context.
-- Define result envelopes.
-- Define status behavior.
-- Define registry behavior.
-- Do not implement intelligence logic yet.
+- Defined async `BaseAgent` abstract class with Template Method lifecycle.
+- Defined `AgentContext` and `AgentResult` Pydantic models.
+- Defined `AgentRegistry` for name-based lookup.
+- Extended error hierarchy with `AgentValidationError`, `AgentNetworkError`, `AgentRateLimitError`, `AgentTimeoutError`.
+- Added agent error re-exports.
+- Added unit tests for context, result, registry, and lifecycle.
 
 ### Phase 2: Deterministic Agents
 

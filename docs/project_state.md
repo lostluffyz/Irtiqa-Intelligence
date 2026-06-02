@@ -17,6 +17,7 @@ Current architectural direction:
 - FastAPI CRUD API endpoint Phase 3 implemented for outreach messages and agent runs.
 - Workflow foundation implemented with context, result, state, policy, registry, and runner contracts.
 - Concrete `score_refresh` workflow implemented using deterministic persisted-data scoring.
+- Agent Interface Foundation implemented with async `BaseAgent`, `AgentContext`, `AgentResult`, `AgentRegistry`, and structured agent error hierarchy.
 - FastAPI exception handlers integrated with the structured error hierarchy.
 - FastAPI lifespan startup/shutdown logging implemented.
 - SQLAlchemy ORM model layer implemented.
@@ -30,7 +31,7 @@ Current architectural direction:
 - Centralized structured logging implemented.
 - Structured error hierarchy implemented.
 - SQLite backup strategy documented.
-- Agent-based architecture documented, not implemented.
+- Agent Interface Foundation implemented with fully asynchronous abstract contracts.
 - Frontend exists only as an empty top-level placeholder directory.
 
 Current top-level structure:
@@ -45,12 +46,14 @@ Irtiqa-Intelligence/
 |-- .gitignore
 |-- app/
 |   |-- api/
+|   |-- agents/
 |   |-- core/
 |   |-- database/
 |   |-- models/
 |   |-- repositories/
 |   |-- schemas/
-|   `-- services/
+|   |-- services/
+|   `-- workflows/
 |-- database/
 |   `-- migrations/
 |-- docs/
@@ -87,22 +90,23 @@ Current status:
 - Task 9, CRUD API Endpoints Phase 3, is complete for outreach messages and agent runs.
 - Task 10, Workflow Foundation Phase 1, is complete.
 - Phase 2 `score_refresh` workflow is complete.
-- Current full test suite result is `114 passed`.
+- Task 11, Agent Interface Foundation, is complete.
+- Current full test suite result is `143 passed`.
 - Alembic schema drift check reports no new upgrade operations after upgrading to head.
 - Generated artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` should remain uncommitted.
-- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Jobs, scraping, frontend, and concrete agents have not been implemented.
+- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation is complete. Jobs, scraping, frontend, and concrete agents have not been implemented.
 
 ## Repository Health Summary
 
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `114 passed`.
+- Current test count: `143 passed`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: FastAPI skeleton, Phase 1, Phase 2, and Phase 3 CRUD API routes, database, repositories, services, schemas, workflow foundation, `score_refresh`, logging, errors, and backup documentation are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; jobs, frontend, scraping, and concrete agents are intentionally not implemented yet.
+- Architecture status: FastAPI skeleton, Phase 1, Phase 2, and Phase 3 CRUD API routes, database, repositories, services, schemas, workflow foundation, `score_refresh`, agent interface foundation, logging, errors, and backup documentation are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; agent interface foundation exists; jobs, frontend, scraping, and concrete agents are intentionally not implemented yet.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: agent base interfaces.
+- Next milestone: concrete agent implementation or background job foundation.
 
 ## Database Schema
 
@@ -583,7 +587,7 @@ python -m pytest
 Result:
 
 ```text
-105 passed
+143 passed
 ```
 
 Additional migration verification:
@@ -681,12 +685,23 @@ Completed:
 - Added executable `score_refresh` workflow.
 - Added append-only score creation and `agent_runs` observability for `score_refresh`.
 - Added unit and integration tests for `score_refresh`.
+- Added Agent Interface Foundation package.
+- Added async `BaseAgent` abstract class with lifecycle management.
+- Added `AgentContext` Pydantic model for agent input.
+- Added `AgentResult` Pydantic model for agent output.
+- Added `AgentRegistry` for name-based agent class lookup.
+- Added `AgentRunOutput` typed dictionary for `_run()` return values.
+- Added `AgentValidationError`, `AgentNetworkError`, `AgentRateLimitError`, and `AgentTimeoutError` to the structured error hierarchy.
+- Added agent error re-exports in `app/agents/errors.py`.
+- Added agent interface unit tests for context, result, registry, and lifecycle.
+- Documented Agent Interface Foundation completion.
 
 Documentation currently aligned with implemented schema:
 
 - `docs/database.md`
 - `docs/agents.md`
 - `docs/workflows.md`
+- `docs/agent_interface_design.md`
 - `docs/project_state.md`
 - `docs/project_handoff.md`
 - `docs/codex_bootstrap.md`
@@ -697,7 +712,7 @@ Known issues or gaps:
 
 - CRUD API routes currently exist for all current persisted entities: companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
 - Workflow foundation, runner, and `score_refresh` exist.
-- No agent implementation exists yet.
+- Agent Interface Foundation is implemented but no concrete agent implementations exist yet.
 - No CI configuration exists yet.
 - No Docker or deployment configuration exists yet.
 - No PostgreSQL runtime verification has been performed.
@@ -710,8 +725,8 @@ Known issues or gaps:
 
 Recommended order:
 
-1. Implement agent base interfaces after executable workflows are in place.
+1. Implement concrete agents using the Agent Interface Foundation.
 2. Add background job foundation for long-running execution.
 3. Add PostgreSQL compatibility check using the `postgres` optional dependency.
 
-Do not begin agent implementation until the service layer, logging, error handling, and tests are established.
+The Agent Interface Foundation is in place. Concrete agents can now be implemented by subclassing `BaseAgent`.
