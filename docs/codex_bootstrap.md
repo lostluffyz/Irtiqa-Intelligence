@@ -28,10 +28,9 @@ Repository rules:
 Planned future agents:
 
 1. Deep Scraper Agent
-2. Technographic Intelligence Agent
-3. Intent Signal Agent
-4. Intelligence Scoring Agent
-5. Personalization Agent
+2.  **Intent Signal Agent**: Build upon base agent concepts to extract behavioral signals.
+3.  **Intelligence Scoring Agent**: Build on workflow abstractions to continuously score leads.
+4. Personalization Agent
 
 Do not implement agents yet.
 
@@ -252,7 +251,12 @@ Current health:
 - Current test count: `192 passed`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
 - Architecture status: FastAPI skeleton, CRUD API Endpoints, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Deep Scraper Agent, logging, errors, and backup documentation are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints exist; workflow foundation exists; Agent Interface Foundation and Deep Scraper exist; jobs, frontend, and remaining concrete agents are intentionally not implemented yet.
+- Runtime surface status: health endpoint and CRUD endpoints exist; workflow foundation exists;
+1.  **Agent Interface Foundation**: Standardized interfaces in `app.agents` with `BaseAgent`, context, and result structures.
+2.  **Deep Scraper Agent**: Asynchronous, robot-compliant HTTP client storing HTML in `websites` table.
+3.  **Technographic Agent**: Signature-matching technology extraction logic utilizing a 70/30 weighting logic and persisting to `technologies` table via the `TechnologyService`.
+4.  **Database & Migrations**: Schema locked in. Hardening is in place.
+5.  **Service Layer**: Business boundaries over repositories with robust transaction scope support.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
 - Next milestone: Technographic Agent Implementation.
 

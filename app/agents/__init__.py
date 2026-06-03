@@ -1,6 +1,7 @@
 from app.agents.base import AgentRunOutput, BaseAgent
 from app.agents.context import AgentContext
 from app.agents.deep_scraper import DeepScraperAgent
+from app.agents.technographic import TechnographicAgent
 from app.agents.errors import (
     AgentConfigurationError,
     AgentError,
@@ -29,4 +30,5 @@ __all__ = [
     "AgentValidationError",
     "BaseAgent",
     "DeepScraperAgent",
+    "TechnographicAgent",
 ]

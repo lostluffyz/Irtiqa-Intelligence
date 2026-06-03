@@ -20,9 +20,10 @@ Current architectural direction:
 
 ### Next Steps
 
-1.  **Technographic Agent Implementation**: Leverage the Deep Scraper's `raw_html` output to extract tools and platforms.
+2.  **Intent Signal Agent**: Extract behavioral and intent signals from scraped content or third-party sources.
 
-- FastAPI exception handlers integrated with the structured error hierarchy.
+- Technographic Intelligence Agent implemented and tested with 40+ signatures across 8 categories.
+- Deep Scraper Agent implemented and tested with robust parsing and persistence.
 - FastAPI lifespan startup/shutdown logging implemented.
 - SQLAlchemy ORM model layer implemented.
 - SQLite-first database setup implemented.
@@ -95,22 +96,24 @@ Current status:
 - Task 10, Workflow Foundation Phase 1, is complete.
 - Phase 2 `score_refresh` workflow is complete.
 - Task 11, Agent Interface Foundation, is complete.
-- Current full test suite result is `143 passed`.
+- Deep Scraper Agent is complete.
+- Technographic Agent is complete.
+- Current full test suite result is `211 passed`.
 - Alembic schema drift check reports no new upgrade operations after upgrading to head.
 - Generated artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` should remain uncommitted.
-- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation is complete. Jobs, scraping, frontend, and concrete agents have not been implemented.
+- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, and Technographic Agent are complete. Jobs, scraping orchestration, frontend, and remaining agents have not been implemented.
 
 ## Repository Health Summary
 
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `143 passed`.
+- Current test count: `211 passed`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: FastAPI skeleton, Phase 1, Phase 2, and Phase 3 CRUD API routes, database, repositories, services, schemas, workflow foundation, `score_refresh`, agent interface foundation, logging, errors, and backup documentation are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; agent interface foundation exists; jobs, frontend, scraping, and concrete agents are intentionally not implemented yet.
+- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, and Technographic Agent are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints for all models exist; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper and Technographic Agent exist.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: concrete agent implementation or background job foundation.
+- Next milestone: Intent Signal Agent or background job foundation.
 
 ## Database Schema
 
@@ -699,6 +702,9 @@ Completed:
 - Added agent error re-exports in `app/agents/errors.py`.
 - Added agent interface unit tests for context, result, registry, and lifecycle.
 - Documented Agent Interface Foundation completion.
+- Implemented Deep Scraper Agent logic mapping normalized URLs and storing `raw_html`.
+- Implemented Technographic Agent to detect tools from `raw_html` via signature matching.
+- Developed scoring algorithms and tested confidence logic (70/30 weighting).
 
 Documentation currently aligned with implemented schema:
 
@@ -716,7 +722,7 @@ Known issues or gaps:
 
 - CRUD API routes currently exist for all current persisted entities: companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
 - Workflow foundation, runner, and `score_refresh` exist.
-- Agent Interface Foundation is implemented but no concrete agent implementations exist yet.
+- Agent Interface Foundation is implemented. Deep Scraper Agent and Technographic Agent are completed.
 - No CI configuration exists yet.
 - No Docker or deployment configuration exists yet.
 - No PostgreSQL runtime verification has been performed.
@@ -729,8 +735,8 @@ Known issues or gaps:
 
 Recommended order:
 
-1. Implement concrete agents using the Agent Interface Foundation.
+1. Implement remaining agents (Intent Signal, Intelligence Scoring, Personalization).
 2. Add background job foundation for long-running execution.
 3. Add PostgreSQL compatibility check using the `postgres` optional dependency.
 
-The Agent Interface Foundation is in place. Concrete agents can now be implemented by subclassing `BaseAgent`.
+The Agent Interface Foundation and first two core agents are in place. Concrete agents can now be fully integrated with background orchestration.

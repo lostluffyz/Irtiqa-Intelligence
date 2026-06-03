@@ -6,7 +6,7 @@ This document is the canonical handoff for Irtiqa Intelligence. It is written so
 
 Irtiqa Intelligence is currently in the backend foundation phase. The implemented work includes project metadata, database architecture, SQLAlchemy models, Pydantic schemas, Alembic migrations, SQLite session management, repository classes, service classes, centralized logging, structured errors, database hardening, SQLite backup strategy documentation, a FastAPI application skeleton, a health endpoint, CRUD API Endpoints Phase 1 for companies, contacts, and websites, CRUD API Endpoints Phase 2 for technologies, intent signals, and intelligence scores, CRUD API Endpoints Phase 3 for outreach messages and agent runs, workflow foundation, the concrete `score_refresh` workflow, Agent Interface Foundation, and tests.
 
-The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Jobs, scraping logic, frontend, and concrete agent implementations do not exist yet.
+The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Deep Scraper Agent and Technographic Agent have been implemented. Jobs, frontend, and remaining concrete agent implementations do not exist yet.
 
 Current repository layout:
 
@@ -411,104 +411,11 @@ Completed Agent Interface Foundation:
 - Added agent interface unit tests for context, result, registry, and lifecycle.
 - Agents integrate with `AgentRunService` for `agent_runs` observability.
 - Agents use structured logging via `irtiqa.agents` namespace.
-- Agent Interface Foundation is production-ready. No concrete agents are implemented yet.
-
-Documented transaction ownership decision:
-
-- Services own transaction boundaries for current application use cases.
-- API routes should depend on services rather than repositories.
-- Repositories receive sessions but never commit, roll back, or create sessions.
-- `session_scope()` remains the canonical service-level unit-of-work boundary.
-- FastAPI's raw database session dependency is low-level infrastructure and is not the default CRUD transaction boundary.
-- API-level transactions should not be introduced unless services are intentionally refactored to accept an external unit-of-work.
-
-## Next Milestone: Technographic Agent Implementation
-
-**Goal:** Implement the Technographic Intelligence Agent using the Agent Interface Foundation.
-
-**Status:** Ready to start.
-
-**Tasks:**
-1.  **Architecture Design**: Design the Technographic Agent, identifying dependencies and output mappings.
-2.  **Implementation**: Implement the agent, leveraging the Deep Scraper's output.
-3.  **Testing**: Write comprehensive unit tests with appropriate mocks.
-
-## Recent Achievements
-
-*   **Deep Scraper Agent Implementation**: Successfully implemented the asynchronous web scraper with `httpx` and `BeautifulSoup4`. Included robust error handling, concurrency limiting, `robots.txt` enforcement, and SQLite persistence. Comprehensive unit testing completed.
-*   **Agent Interface Foundation**: Defined and implemented standard contracts (`BaseAgent`, `AgentContext`, `AgentResult`) to unify agent lifecycle execution, error handling, logging, and observability.
-
-Completed project hygiene:
-
-- Created `pyproject.toml`.
-- Created `.gitignore`.
-- Created `.env.example`.
-- Created `README.md`.
-- Removed generated SQLite database artifacts.
-- Removed Python cache artifacts after verification.
-
-Completed testing foundation:
-
-- Added pytest setup.
-- Added isolated temporary SQLite database fixtures.
-- Added Alembic migration tests.
-- Added SQLAlchemy model tests.
-- Added relationship persistence tests.
-- Added repository tests.
-- Added `session_scope()` commit and rollback tests.
-- Added FastAPI health endpoint tests.
-- Added FastAPI dependency override test.
-- Added FastAPI lifespan startup test.
-- Added FastAPI CRUD integration tests for companies, contacts, and websites.
-- Added FastAPI CRUD error response tests for conflict, not found, and request validation failures.
-- Added FastAPI CRUD integration tests for technologies, intent signals, and intelligence scores.
-- Added FastAPI CRUD error response tests for Phase 2 conflict, not found, and request validation failures.
-- Added FastAPI CRUD integration tests for outreach messages and agent runs.
-- Added FastAPI CRUD error response tests for Phase 3 conflict, not found, and request validation failures.
-- Added workflow foundation unit tests.
-- Added scoring policy unit tests for deterministic bounded `score_refresh.v1` scoring.
-- Added workflow unit tests for score creation, observability, result output ids, and structured failures.
-- Added integration tests proving `score_refresh` persists append-only scores and `agent_runs`.
-- Added agent interface context, result, registry, and lifecycle unit tests.
-
-Completed logging foundation:
-
-- Added centralized structured logging.
-- Added configurable application, database, repository, and root log levels.
-- Added console logging.
-- Added rotating file logging.
-- Added timestamped key-value formatting.
-- Added repository debug logging hooks.
-- Added logging tests.
-
-Completed structured error foundation:
-
-- Added shared `IrtiqaError` base exception.
-- Added stable error codes and structured details.
-- Added database, repository, validation, service, workflow, future agent, configuration, and external integration exception categories.
-- Added error serialization through `to_dict()`.
-- Added error logging integration using the centralized logging architecture.
-- Added structured error tests.
-
-Completed database hardening:
-
-- Added SQLite WAL mode configuration.
-- Added SQLite busy timeout configuration.
-- Added hardening migration `20260531_0002`.
-- Added confidence range constraints.
-- Added intent signal strength constraint.
-- Added score range constraints.
-- Added stable status constraints.
-- Added database hardening tests.
-
-Completed SQLite backup strategy documentation:
-
-- Documented local SQLite backup practices.
-- Documented automated backup recommendations.
-- Documented restore procedures.
-- Documented WAL-specific backup considerations.
-- Documented backup order around migrations.
-- Documented SQLite-to-PostgreSQL migration backup considerations.
+- 1. **Agent Interface Foundation**: `app.agents` with `BaseAgent`, context models, output mappings.
+- 2. **Deep Scraper Agent**: Asynchronous HTML fetcher mapped to `Website` models.
+- 3. **Technographic Agent**: Signature-based detector (70/30 weighting model) integrated with `TechnologyService`.
+- 4. **Database & Migrations**: Schema locked in. Database hardening done.
+- 5. **Service Layer**: Business boundaries over repositories with transaction scope support.
 
 ## 4. Test Results
 
@@ -521,7 +428,7 @@ python -m pytest
 Result:
 
 ```text
-143 passed
+211 passed
 ```
 
 Current test coverage verifies:
@@ -595,10 +502,11 @@ Important test behavior:
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `143 passed`.
-- Schema drift status: clean after upgrading the local SQLite database to Alembic head.
+- Stage: Backend Intelligence Agents
+- Test Count: `211 passed`
+- Remaining work: Background job orchestration, remaining agents (Intent Signal, Personalization), PostgreSQL scaling, deployment.
 - Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; jobs, frontend, scraping, and concrete agents are intentionally not implemented yet.
+- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper and Technographic Agent are implemented; jobs, frontend, and remaining concrete agents are intentionally not implemented yet.
 - Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, and Agent Interface Foundation.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
 - Next milestone: concrete agent implementation or background job foundation.
@@ -848,9 +756,9 @@ Current known gaps:
 
 - CRUD API routes currently exist for all current persisted entities: companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
 - Workflow foundation, workflow runner, and `score_refresh` exist.
-- No job system exists yet.
-- Agent Interface Foundation is implemented but no concrete agent implementations exist yet.
-- No scraping implementation exists yet.
+- **1. Background Orchestration**
+- The foundation is built. We need a celery/arq equivalent or a cron system to orchestrate workflows and agents.
+- Agents (Deep Scraper, Technographic) are synchronous to the runner for now but designed for asynchronous invocation.
 - No frontend implementation exists yet.
 - No CI configuration exists yet.
 - No Docker or deployment configuration exists yet.
@@ -905,40 +813,25 @@ Completed:
 - Added agent error re-exports.
 - Added unit tests for context, result, registry, and lifecycle.
 
-### Phase 2: Deterministic Agents
+### Phase 2: Completed Agents
 
-Implement deterministic agents before external-data agents.
+1. Deep Scraper Agent (Completed)
+2. Technographic Intelligence Agent (Completed)
 
-Recommended order:
+These initial agents established the standard execution pattern for scraping websites and analyzing tools.
 
-1. Intelligence Scoring Agent.
-2. Personalization Agent.
-
-Reason:
-
-- Scoring and personalization can be tested with stored database records.
-- They do not require scraping or external integrations at first.
-
-### Phase 3: Technographic and Intent Agents
+### Phase 3: Pending Agents
 
 Recommended order:
 
-1. Technographic Intelligence Agent.
-2. Intent Signal Agent.
+1. Intent Signal Agent.
+2. Intelligence Scoring Agent.
+3. Personalization Agent.
 
 Reason:
 
-- These depend on normalized websites and potentially external or scraped evidence.
-- They should be introduced after scoring and personalization contracts are stable.
-
-### Phase 4: Deep Scraper Agent
-
-Implement last.
-
-Reason:
-
-- Scraping has the highest operational complexity.
-- It requires rate limits, retries, robots policy, timeouts, content parsing, deduplication, and careful observability.
+- The platform now has real extracted technologies and HTML.
+- These agents will process that data to generate insights.
 
 Future agent output mapping:
 
@@ -1357,7 +1250,7 @@ docs/project_state.md
 docs/project_handoff.md
 ```
 
-Do not implement concrete agents yet.
+Concrete agents have begun implementation.
 
 ### 11. Background Job Foundation
 
@@ -1452,10 +1345,8 @@ docs/project_handoff.md
 
 Concrete agent order:
 
-1. Intelligence Scoring Agent.
-2. Personalization Agent.
-3. Technographic Intelligence Agent.
-4. Intent Signal Agent.
-5. Deep Scraper Agent.
-
-Do not skip ahead to concrete agents before the platform foundation is complete.
+1. Deep Scraper Agent (Completed).
+2. Technographic Intelligence Agent (Completed).
+3. Intent Signal Agent.
+4. Intelligence Scoring Agent.
+5. Personalization Agent.
