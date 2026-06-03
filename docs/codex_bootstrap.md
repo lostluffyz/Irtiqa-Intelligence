@@ -217,6 +217,7 @@ Implemented:
 - Executable `score_refresh` workflow using existing persisted data.
 - Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, `AgentRegistry`.
 - Structured agent error hierarchy with `AgentValidationError`, `AgentNetworkError`, `AgentRateLimitError`, `AgentTimeoutError`.
+- Deep Scraper Agent with async fetching, `robots.txt` enforcement, and DOM parsing.
 - Project metadata.
 - Documentation.
 - Pytest foundation.
@@ -224,8 +225,7 @@ Implemented:
 Not implemented:
 
 - Jobs.
-- Concrete agents.
-- Scraping.
+- Concrete agents (except Deep Scraper).
 - Frontend.
 - CI.
 
@@ -233,7 +233,7 @@ Latest known full test result:
 
 ```text
 python -m pytest
-143 passed
+192 passed
 ```
 
 Latest known migration verification:
@@ -249,12 +249,12 @@ No new upgrade operations detected.
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `143 passed`.
+- Current test count: `192 passed`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, logging, errors, and backup documentation are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; jobs, frontend, scraping, and concrete agents are intentionally not implemented yet.
+- Architecture status: FastAPI skeleton, CRUD API Endpoints, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Deep Scraper Agent, logging, errors, and backup documentation are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints exist; workflow foundation exists; Agent Interface Foundation and Deep Scraper exist; jobs, frontend, and remaining concrete agents are intentionally not implemented yet.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: concrete agent implementation or background job foundation.
+- Next milestone: Technographic Agent Implementation.
 
 ## Current Database Schema
 
@@ -262,7 +262,7 @@ Implemented tables:
 
 - `companies`
 - `contacts`
-- `websites`
+- `websites` (updated with `raw_html` and `extracted_text`)
 - `technologies`
 - `intent_signals`
 - `intelligence_scores`
@@ -446,25 +446,16 @@ Do not:
 Next recommended task:
 
 ```text
-Concrete Agent Implementation
+Technographic Agent Implementation
 ```
 
 Recommended scope:
 
-- Implement the Intelligence Scoring Agent by subclassing `BaseAgent`.
-- Use the existing deterministic scoring policy from `score_refresh`.
-- Add focused agent tests.
-- Update `docs/agents.md`.
+- Implement the Technographic Intelligence Agent by subclassing `BaseAgent`.
+- Leverage the raw HTML collected by the Deep Scraper to extract technologies.
+- Add focused agent tests with appropriate DOM mocks.
 - Update `docs/project_state.md`.
 - Update `docs/project_handoff.md`.
-
-Alternative next task:
-
-```text
-Background Job Foundation
-```
-
-Do not build scraping, frontend, or external API calls in the next task unless the user explicitly overrides the roadmap.
 
 ## Reference Documents
 

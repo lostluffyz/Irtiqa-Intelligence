@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -34,6 +34,8 @@ class Website(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     page_type: Mapped[str | None] = mapped_column(String(100))
     http_status: Mapped[int | None] = mapped_column(Integer)
     last_scraped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    raw_html: Mapped[str | None] = mapped_column(Text)
+    extracted_text: Mapped[str | None] = mapped_column(Text)
 
     company: Mapped[Company] = relationship(back_populates="websites")
     technologies: Mapped[list[Technology]] = relationship(back_populates="website")

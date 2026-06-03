@@ -8,16 +8,20 @@ Irtiqa Intelligence is a production-grade lead intelligence platform in backend-
 
 Current architectural direction:
 
-- FastAPI application skeleton implemented.
-- Health endpoint implemented.
-- API router structure implemented.
-- FastAPI dependency injection setup implemented.
-- FastAPI CRUD API endpoint Phase 1 implemented for companies, contacts, and websites.
-- FastAPI CRUD API endpoint Phase 2 implemented for technologies, intent signals, and intelligence scores.
-- FastAPI CRUD API endpoint Phase 3 implemented for outreach messages and agent runs.
-- Workflow foundation implemented with context, result, state, policy, registry, and runner contracts.
-- Concrete `score_refresh` workflow implemented using deterministic persisted-data scoring.
-- Agent Interface Foundation implemented with async `BaseAgent`, `AgentContext`, `AgentResult`, `AgentRegistry`, and structured agent error hierarchy.
+## Active Components
+
+### Backend
+*   **FastAPI**: Configured and running.
+*   **Database**: SQLite with SQLAlchemy 2.0 and Alembic.
+*   **Models**: `Company`, `Website`, `Technology`, `IntentSignal`.
+*   **Service Layer**: `CompanyService`, `WebsiteService`, `TechnologyService`, `IntentSignalService`, `AgentRunService` implemented.
+*   **Agent Interface Foundation**: Standardized abstractions via `app.agents` (`BaseAgent`, `AgentContext`, `AgentResult`).
+*   **Deep Scraper Agent**: Core crawling, parsing, and structured data persistence implemented and tested.
+
+### Next Steps
+
+1.  **Technographic Agent Implementation**: Leverage the Deep Scraper's `raw_html` output to extract tools and platforms.
+
 - FastAPI exception handlers integrated with the structured error hierarchy.
 - FastAPI lifespan startup/shutdown logging implemented.
 - SQLAlchemy ORM model layer implemented.

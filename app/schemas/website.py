@@ -14,6 +14,8 @@ class WebsiteCreate(IrtiqaSchema):
     page_type: str | None = Field(default=None, max_length=100)
     http_status: int | None = Field(default=None, ge=100, le=599)
     last_scraped_at: datetime | None = None
+    raw_html: str | None = None
+    extracted_text: str | None = None
 
 
 class WebsiteUpdate(IrtiqaSchema):
@@ -23,6 +25,8 @@ class WebsiteUpdate(IrtiqaSchema):
     page_type: str | None = Field(default=None, max_length=100)
     http_status: int | None = Field(default=None, ge=100, le=599)
     last_scraped_at: datetime | None = None
+    raw_html: str | None = None
+    extracted_text: str | None = None
 
     @model_validator(mode="after")
     def require_update_values(self) -> WebsiteUpdate:
@@ -38,6 +42,8 @@ class WebsiteRead(TimestampedReadSchema):
     page_type: str | None
     http_status: int | None
     last_scraped_at: datetime | None
+    raw_html: str | None = None
+    extracted_text: str | None = None
 
 
 class WebsiteList(ListSchema):
