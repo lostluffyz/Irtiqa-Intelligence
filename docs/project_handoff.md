@@ -6,7 +6,7 @@ This document is the canonical handoff for Irtiqa Intelligence. It is written so
 
 Irtiqa Intelligence is currently in the backend foundation phase. The implemented work includes project metadata, database architecture, SQLAlchemy models, Pydantic schemas, Alembic migrations, SQLite session management, repository classes, service classes, centralized logging, structured errors, database hardening, SQLite backup strategy documentation, a FastAPI application skeleton, a health endpoint, CRUD API Endpoints Phase 1 for companies, contacts, and websites, CRUD API Endpoints Phase 2 for technologies, intent signals, and intelligence scores, CRUD API Endpoints Phase 3 for outreach messages and agent runs, workflow foundation, the concrete `score_refresh` workflow, Agent Interface Foundation, and tests.
 
-The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Deep Scraper Agent, Technographic Agent, and Intent Signal Agent have been implemented. Jobs, frontend, and remaining concrete agent implementations do not exist yet.
+The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, and Intelligence Scoring Agent have been implemented. Jobs, frontend, and remaining concrete agent implementations do not exist yet.
 
 Current repository layout:
 
@@ -415,8 +415,9 @@ Completed Agent Interface Foundation:
 - 2. **Deep Scraper Agent**: Asynchronous HTML fetcher mapped to `Website` models.
 - 3. **Technographic Agent**: Signature-based detector (70/30 weighting model) integrated with `TechnologyService`.
 - 4. **Intent Signal Agent**: Deterministic rule engine that converts scraped text and detected technologies into persisted `intent_signals`.
-- 5. **Database & Migrations**: Schema locked in. Database hardening done.
-- 6. **Service Layer**: Business boundaries over repositories with transaction scope support.
+- 5. **Intelligence Scoring Agent**: Aggregation engine that imports the deterministic workflow scoring policy to produce intelligence scores.
+- 6. **Database & Migrations**: Schema locked in. Database hardening done.
+- 7. **Service Layer**: Business boundaries over repositories with transaction scope support.
 
 ## 4. Test Results
 
@@ -429,7 +430,7 @@ python -m pytest
 Result:
 
 ```text
-241 passed
+245 passed
 ```
 
 Current test coverage verifies:
@@ -504,10 +505,10 @@ Current health:
 
 - Foundation status: healthy.
 - Stage: Backend Intelligence Agents
-- Test Count: `211 passed`
-- Remaining work: Background job orchestration, remaining agents (Intent Signal, Personalization), PostgreSQL scaling, deployment.
+- Test Count: `245 passed`
+- Remaining work: Background job orchestration, remaining agents (Personalization), PostgreSQL scaling, deployment.
 - Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper and Technographic Agent are implemented; jobs, frontend, and remaining concrete agents are intentionally not implemented yet.
+- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, and Intelligence Scoring Agent are implemented; jobs, frontend, and remaining concrete agents are intentionally not implemented yet.
 - Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, and Agent Interface Foundation.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
 - Next milestone: concrete agent implementation or background job foundation.
@@ -724,13 +725,8 @@ Concrete Agent Implementation
 
 Recommended scope:
 
-- Implement the Intelligence Scoring Agent by subclassing `BaseAgent`.
-- Use the existing deterministic scoring policy from `score_refresh`.
-- Add focused agent tests.
-- Update `docs/agents.md`.
-- Update `docs/project_state.md`.
-- Update `docs/project_handoff.md`.
-- Do not add jobs, scraping, frontend, or external API calls yet.
+- Implement the Personalization Agent by subclassing `BaseAgent`.
+- Define personalization templates and placeholders.
 
 Alternative next task:
 
@@ -749,6 +745,7 @@ Why concrete agents or job foundation are next:
 - The full CRUD API milestone is implemented and tested.
 - Workflow foundation and `score_refresh` are implemented and tested.
 - Agent Interface Foundation is implemented and tested.
+- Deep Scraper, Technographic, Intent Signal, and Intelligence Scoring Agents are completed.
 - Concrete agents or job scheduling are the next boundaries.
 
 ## 11. Open Issues
@@ -819,6 +816,7 @@ Completed:
 1. Deep Scraper Agent (Completed)
 2. Technographic Intelligence Agent (Completed)
 3. Intent Signal Agent (Completed)
+4. Intelligence Scoring Agent (Completed)
 
 These initial agents established the standard execution pattern for scraping websites, analyzing tools, and extracting evidence-backed commercial intent signals.
 
@@ -826,8 +824,7 @@ These initial agents established the standard execution pattern for scraping web
 
 Recommended order:
 
-1. Intelligence Scoring Agent.
-2. Personalization Agent.
+1. Personalization Agent.
 
 Reason:
 
@@ -1349,5 +1346,5 @@ Concrete agent order:
 1. Deep Scraper Agent (Completed).
 2. Technographic Intelligence Agent (Completed).
 3. Intent Signal Agent (Completed).
-4. Intelligence Scoring Agent.
+4. Intelligence Scoring Agent (Completed).
 5. Personalization Agent.

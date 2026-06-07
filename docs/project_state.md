@@ -19,12 +19,14 @@ Current architectural direction:
 *   **Deep Scraper Agent**: Core crawling, parsing, and structured data persistence implemented and tested.
 *   **Technographic Agent**: Signature-based technology detection implemented and tested.
 *   **Intent Signal Agent**: Rule-based commercial buying signal detection implemented and tested.
+*   **Intelligence Scoring Agent**: Aggregation of fit, intent, technographic, and engagement scores utilizing the DeterministicScoreRefreshPolicy.
 
 ### Next Steps
 
-2.  **Intelligence Scoring Agent**: Convert persisted company, technology, and intent evidence into agent-produced scores.
+2.  **Personalization Agent**: Generate tailored outreach copy based on all accumulated intelligence.
 
 - Technographic Intelligence Agent implemented and tested with 40+ signatures across 8 categories.
+- Intelligence Scoring Agent implemented and tested by importing the deterministic workflow scoring policy.
 - Intent Signal Agent implemented and tested with deterministic rules across 8 signal families.
 - Deep Scraper Agent implemented and tested with robust parsing and persistence.
 - FastAPI lifespan startup/shutdown logging implemented.
@@ -102,22 +104,23 @@ Current status:
 - Deep Scraper Agent is complete.
 - Technographic Agent is complete.
 - Intent Signal Agent is complete.
-- Current full test suite result is `241 passed`.
+- Intelligence Scoring Agent is complete.
+- Current full test suite result is `245 passed`.
 - Alembic schema drift check reports no new upgrade operations after upgrading to head.
 - Generated artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` should remain uncommitted.
-- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, and Intent Signal Agent are complete. Jobs, scraping orchestration, frontend, and remaining agents have not been implemented.
+- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, and Intelligence Scoring Agent are complete. Jobs, scraping orchestration, frontend, and remaining agents have not been implemented.
 
 ## Repository Health Summary
 
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `241 passed`.
+- Current test count: `245 passed`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, and Intent Signal Agent are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for all models exist; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, and Intent Signal Agent exist.
+- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, and Intelligence Scoring Agent are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints for all models exist; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, and Intelligence Scoring Agent exist.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: Intelligence Scoring Agent or background job foundation.
+- Next milestone: Personalization Agent or background job foundation.
 
 ## Database Schema
 
@@ -598,7 +601,7 @@ python -m pytest
 Result:
 
 ```text
-143 passed
+245 passed
 ```
 
 Additional migration verification:
@@ -712,6 +715,7 @@ Completed:
 - Implemented Intent Signal Agent to detect commercial buying signals from `extracted_text` and detected technologies.
 - Added deterministic intent rule registry covering hiring, growth, expansion, funding, product launch, partnership, enterprise readiness, and digital transformation signals.
 - Added intent signal normalization, confidence scoring, strength scoring, in-run deduplication, cross-run duplicate suppression through `IntentSignalService`, and unit tests.
+- Implemented Intelligence Scoring Agent utilizing `DeterministicScoreRefreshPolicy` to compute `IntelligenceScore`s transparently.
 
 Documentation currently aligned with implemented schema:
 
@@ -729,7 +733,7 @@ Known issues or gaps:
 
 - CRUD API routes currently exist for all current persisted entities: companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
 - Workflow foundation, runner, and `score_refresh` exist.
-- Agent Interface Foundation is implemented. Deep Scraper Agent, Technographic Agent, and Intent Signal Agent are completed.
+- Agent Interface Foundation is implemented. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, and Intelligence Scoring Agent are completed.
 - No CI configuration exists yet.
 - No Docker or deployment configuration exists yet.
 - No PostgreSQL runtime verification has been performed.
@@ -742,8 +746,8 @@ Known issues or gaps:
 
 Recommended order:
 
-1. Implement remaining agents (Intelligence Scoring, Personalization).
+1. Implement remaining agents (Personalization).
 2. Add background job foundation for long-running execution.
 3. Add PostgreSQL compatibility check using the `postgres` optional dependency.
 
-The Agent Interface Foundation and first three core agents are in place. Concrete agents can now be fully integrated with background orchestration.
+The Agent Interface Foundation and first four core agents are in place. Concrete agents can now be fully integrated with background orchestration.

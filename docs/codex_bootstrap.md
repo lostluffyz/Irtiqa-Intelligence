@@ -25,6 +25,10 @@ Repository rules:
 - Maintain clean architecture.
 - Follow SOLID principles.
 
+### Quick Start for the Next Task
+
+The current milestone is "Concrete Agents". Deep Scraper, Technographic, Intent Signal, and Intelligence Scoring are complete. The next recommended task is the Personalization Agent.
+
 Planned future agents:
 
 1. Deep Scraper Agent
@@ -217,15 +221,15 @@ Implemented:
 - Structured agent error hierarchy with `AgentValidationError`, `AgentNetworkError`, `AgentRateLimitError`, `AgentTimeoutError`.
 - Deep Scraper Agent with async fetching, `robots.txt` enforcement, and DOM parsing.
 - Technographic Agent with deterministic signature matching.
-- Intent Signal Agent with deterministic rule-based commercial signal extraction.
-- Project metadata.
-- Documentation.
+- 4. Intent Signal Agent: converts signals into DB rows.
+- 5. Intelligence Scoring Agent: consumes policy scores transparently.
+- 6. Workflow Engine: supports deterministic state transitions.
+- 7. Repositories: isolated database access without commits.
 - Pytest foundation.
 
 Not implemented:
 
 - Jobs.
-- Intelligence Scoring Agent.
 - Personalization Agent.
 - Frontend.
 - CI.
@@ -234,7 +238,7 @@ Latest known full test result:
 
 ```text
 python -m pytest
-241 passed
+245 passed
 ```
 
 Latest known migration verification:
@@ -250,9 +254,9 @@ No new upgrade operations detected.
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `192 passed`.
+- Current test count: `245 passed`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: FastAPI skeleton, CRUD API Endpoints, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Deep Scraper Agent, logging, errors, and backup documentation are implemented.
+- Architecture status: FastAPI skeleton, CRUD API Endpoints, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, logging, errors, and backup documentation are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints exist; workflow foundation exists;
 1.  **Agent Interface Foundation**: Standardized interfaces in `app.agents` with `BaseAgent`, context, and result structures.
 2.  **Deep Scraper Agent**: Asynchronous, robot-compliant HTTP client storing HTML in `websites` table.
@@ -261,7 +265,7 @@ Current health:
 5.  **Database & Migrations**: Schema locked in. Hardening is in place.
 6.  **Service Layer**: Business boundaries over repositories with robust transaction scope support.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: Intelligence Scoring Agent implementation.
+- Next milestone: Personalization Agent implementation.
 
 ## Current Database Schema
 
@@ -453,14 +457,13 @@ Do not:
 Next recommended task:
 
 ```text
-Intelligence Scoring Agent Implementation
+Personalization Agent Implementation
 ```
 
 Recommended scope:
 
-- Implement the Intelligence Scoring Agent by subclassing `BaseAgent`.
-- Reuse the deterministic scoring policy proven by `score_refresh`.
-- Consume persisted company, contact, technology, and intent signal records.
+- Implement the Personalization Agent by subclassing `BaseAgent`.
+- Generate tailored outreach copy based on all accumulated intelligence.
 - Add focused agent tests.
 - Update `docs/project_state.md`.
 - Update `docs/project_handoff.md`.
