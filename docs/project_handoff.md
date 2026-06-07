@@ -6,7 +6,7 @@ This document is the canonical handoff for Irtiqa Intelligence. It is written so
 
 Irtiqa Intelligence is currently in the backend foundation phase. The implemented work includes project metadata, database architecture, SQLAlchemy models, Pydantic schemas, Alembic migrations, SQLite session management, repository classes, service classes, centralized logging, structured errors, database hardening, SQLite backup strategy documentation, a FastAPI application skeleton, a health endpoint, CRUD API Endpoints Phase 1 for companies, contacts, and websites, CRUD API Endpoints Phase 2 for technologies, intent signals, and intelligence scores, CRUD API Endpoints Phase 3 for outreach messages and agent runs, workflow foundation, the concrete `score_refresh` workflow, Agent Interface Foundation, and tests.
 
-The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, and Intelligence Scoring Agent have been implemented. Jobs, frontend, and remaining concrete agent implementations do not exist yet.
+The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent have been implemented. Jobs, frontend, and external integrations do not exist yet.
 
 Current repository layout:
 
@@ -70,7 +70,13 @@ Irtiqa-Intelligence/
 |   |-- context.py
 |   |-- result.py
 |   |-- registry.py
-|   `-- errors.py
+|   |-- errors.py
+|   |
+|   |-- deep_scraper/
+|   |-- intelligence_scoring/
+|   |-- intent_signal/
+|   |-- personalization/
+|   `-- technographic/
 |
 |-- app/services/
 |   |-- __init__.py

@@ -27,7 +27,7 @@ Repository rules:
 
 ### Quick Start for the Next Task
 
-The current milestone is "Concrete Agents". Deep Scraper, Technographic, Intent Signal, and Intelligence Scoring are complete. The next recommended task is the Personalization Agent.
+The current milestone is "Concrete Agents". Deep Scraper, Technographic, Intent Signal, Intelligence Scoring, and Personalization are complete. The next recommended task is the Background Job Foundation.
 
 Planned future agents:
 
@@ -223,6 +223,7 @@ Implemented:
 - Technographic Agent with deterministic signature matching.
 - 4. Intent Signal Agent: converts signals into DB rows.
 - 5. Intelligence Scoring Agent: consumes policy scores transparently.
+- Personalization Agent: deterministic, multi-variant template architecture.
 - 6. Workflow Engine: supports deterministic state transitions.
 - 7. Repositories: isolated database access without commits.
 - Pytest foundation.
@@ -230,7 +231,6 @@ Implemented:
 Not implemented:
 
 - Jobs.
-- Personalization Agent.
 - Frontend.
 - CI.
 
@@ -238,7 +238,7 @@ Latest known full test result:
 
 ```text
 python -m pytest
-245 passed
+254 passed
 ```
 
 Latest known migration verification:

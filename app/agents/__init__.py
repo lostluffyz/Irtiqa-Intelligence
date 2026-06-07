@@ -3,6 +3,7 @@ from app.agents.context import AgentContext
 from app.agents.deep_scraper import DeepScraperAgent
 from app.agents.intent_signal import IntentSignalAgent
 from app.agents.intelligence_scoring import IntelligenceScoringAgent
+from app.agents.personalization import PersonalizationAgent
 from app.agents.technographic import TechnographicAgent
 from app.agents.errors import (
     AgentConfigurationError,
@@ -34,5 +35,6 @@ __all__ = [
     "DeepScraperAgent",
     "IntelligenceScoringAgent",
     "IntentSignalAgent",
+    "PersonalizationAgent",
     "TechnographicAgent",
 ]

@@ -2,7 +2,7 @@
 
 Irtiqa Intelligence is designed around specialized agents that produce structured intelligence for companies and contacts. This document describes the intended agent responsibilities while staying aligned with the current implemented database schema.
 
-No agent implementation exists yet. The current persistence layer supports agent outputs through these tables:
+All five core agents (Deep Scraper, Technographic Intelligence, Intent Signal, Intelligence Scoring, and Personalization) have been fully implemented. The persistence layer supports agent outputs through these tables:
 
 - `companies`
 - `contacts`
