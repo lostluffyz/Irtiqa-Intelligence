@@ -6,7 +6,7 @@ This document is the canonical handoff for Irtiqa Intelligence. It is written so
 
 Irtiqa Intelligence is currently in the backend foundation phase. The implemented work includes project metadata, database architecture, SQLAlchemy models, Pydantic schemas, Alembic migrations, SQLite session management, repository classes, service classes, centralized logging, structured errors, database hardening, SQLite backup strategy documentation, a FastAPI application skeleton, a health endpoint, CRUD API Endpoints Phase 1 for companies, contacts, and websites, CRUD API Endpoints Phase 2 for technologies, intent signals, and intelligence scores, CRUD API Endpoints Phase 3 for outreach messages and agent runs, workflow foundation, the concrete `score_refresh` workflow, Agent Interface Foundation, and tests.
 
-The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Deep Scraper Agent and Technographic Agent have been implemented. Jobs, frontend, and remaining concrete agent implementations do not exist yet.
+The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Deep Scraper Agent, Technographic Agent, and Intent Signal Agent have been implemented. Jobs, frontend, and remaining concrete agent implementations do not exist yet.
 
 Current repository layout:
 
@@ -414,8 +414,9 @@ Completed Agent Interface Foundation:
 - 1. **Agent Interface Foundation**: `app.agents` with `BaseAgent`, context models, output mappings.
 - 2. **Deep Scraper Agent**: Asynchronous HTML fetcher mapped to `Website` models.
 - 3. **Technographic Agent**: Signature-based detector (70/30 weighting model) integrated with `TechnologyService`.
-- 4. **Database & Migrations**: Schema locked in. Database hardening done.
-- 5. **Service Layer**: Business boundaries over repositories with transaction scope support.
+- 4. **Intent Signal Agent**: Deterministic rule engine that converts scraped text and detected technologies into persisted `intent_signals`.
+- 5. **Database & Migrations**: Schema locked in. Database hardening done.
+- 6. **Service Layer**: Business boundaries over repositories with transaction scope support.
 
 ## 4. Test Results
 
@@ -428,7 +429,7 @@ python -m pytest
 Result:
 
 ```text
-211 passed
+241 passed
 ```
 
 Current test coverage verifies:
@@ -817,21 +818,21 @@ Completed:
 
 1. Deep Scraper Agent (Completed)
 2. Technographic Intelligence Agent (Completed)
+3. Intent Signal Agent (Completed)
 
-These initial agents established the standard execution pattern for scraping websites and analyzing tools.
+These initial agents established the standard execution pattern for scraping websites, analyzing tools, and extracting evidence-backed commercial intent signals.
 
 ### Phase 3: Pending Agents
 
 Recommended order:
 
-1. Intent Signal Agent.
-2. Intelligence Scoring Agent.
-3. Personalization Agent.
+1. Intelligence Scoring Agent.
+2. Personalization Agent.
 
 Reason:
 
-- The platform now has real extracted technologies and HTML.
-- These agents will process that data to generate insights.
+- The platform now has scraped text, detected technologies, and persisted intent signals.
+- The remaining agents will score that intelligence and generate outreach-ready messages.
 
 Future agent output mapping:
 
@@ -1347,6 +1348,6 @@ Concrete agent order:
 
 1. Deep Scraper Agent (Completed).
 2. Technographic Intelligence Agent (Completed).
-3. Intent Signal Agent.
+3. Intent Signal Agent (Completed).
 4. Intelligence Scoring Agent.
 5. Personalization Agent.

@@ -28,11 +28,10 @@ Repository rules:
 Planned future agents:
 
 1. Deep Scraper Agent
-2.  **Intent Signal Agent**: Build upon base agent concepts to extract behavioral signals.
-3.  **Intelligence Scoring Agent**: Build on workflow abstractions to continuously score leads.
-4. Personalization Agent
-
-Do not implement agents yet.
+2. Technographic Intelligence Agent
+3. Intent Signal Agent
+4. Intelligence Scoring Agent
+5. Personalization Agent
 
 ## Current Architecture
 
@@ -217,6 +216,8 @@ Implemented:
 - Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, `AgentRegistry`.
 - Structured agent error hierarchy with `AgentValidationError`, `AgentNetworkError`, `AgentRateLimitError`, `AgentTimeoutError`.
 - Deep Scraper Agent with async fetching, `robots.txt` enforcement, and DOM parsing.
+- Technographic Agent with deterministic signature matching.
+- Intent Signal Agent with deterministic rule-based commercial signal extraction.
 - Project metadata.
 - Documentation.
 - Pytest foundation.
@@ -224,7 +225,8 @@ Implemented:
 Not implemented:
 
 - Jobs.
-- Concrete agents (except Deep Scraper).
+- Intelligence Scoring Agent.
+- Personalization Agent.
 - Frontend.
 - CI.
 
@@ -232,7 +234,7 @@ Latest known full test result:
 
 ```text
 python -m pytest
-192 passed
+241 passed
 ```
 
 Latest known migration verification:
@@ -255,10 +257,11 @@ Current health:
 1.  **Agent Interface Foundation**: Standardized interfaces in `app.agents` with `BaseAgent`, context, and result structures.
 2.  **Deep Scraper Agent**: Asynchronous, robot-compliant HTTP client storing HTML in `websites` table.
 3.  **Technographic Agent**: Signature-matching technology extraction logic utilizing a 70/30 weighting logic and persisting to `technologies` table via the `TechnologyService`.
-4.  **Database & Migrations**: Schema locked in. Hardening is in place.
-5.  **Service Layer**: Business boundaries over repositories with robust transaction scope support.
+4.  **Intent Signal Agent**: Rule-based extraction of buying signals from `websites.extracted_text` and detected technologies, persisted through `IntentSignalService`.
+5.  **Database & Migrations**: Schema locked in. Hardening is in place.
+6.  **Service Layer**: Business boundaries over repositories with robust transaction scope support.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: Technographic Agent Implementation.
+- Next milestone: Intelligence Scoring Agent implementation.
 
 ## Current Database Schema
 
@@ -450,14 +453,15 @@ Do not:
 Next recommended task:
 
 ```text
-Technographic Agent Implementation
+Intelligence Scoring Agent Implementation
 ```
 
 Recommended scope:
 
-- Implement the Technographic Intelligence Agent by subclassing `BaseAgent`.
-- Leverage the raw HTML collected by the Deep Scraper to extract technologies.
-- Add focused agent tests with appropriate DOM mocks.
+- Implement the Intelligence Scoring Agent by subclassing `BaseAgent`.
+- Reuse the deterministic scoring policy proven by `score_refresh`.
+- Consume persisted company, contact, technology, and intent signal records.
+- Add focused agent tests.
 - Update `docs/project_state.md`.
 - Update `docs/project_handoff.md`.
 
