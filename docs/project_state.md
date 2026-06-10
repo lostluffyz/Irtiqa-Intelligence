@@ -25,8 +25,6 @@ Current architectural direction:
 
 ### Next Steps
 
-1.  **PostgreSQL Compatibility Verification**: Verify migrations and repositories against PostgreSQL.
-
 - Technographic Intelligence Agent implemented and tested with 40+ signatures across 8 categories.
 - Personalization Agent implemented and tested with deterministic multi-variant template architecture.
 - Intelligence Scoring Agent implemented and tested by importing the deterministic workflow scoring policy.
@@ -110,7 +108,7 @@ Current status:
 - Intelligence Scoring Agent is complete.
 - Personalization Agent is complete.
 - Task 12, Background Job Foundation, is complete.
-- Current full test suite result is `284 passed`.
+- Current full test suite result is `308 passed` (284 SQLite + 24 PostgreSQL).
 - Alembic schema drift check reports no new upgrade operations after upgrading to head.
 - Generated artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` should remain uncommitted.
 - The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are complete. Background Job Foundation is complete. Scraping orchestration, frontend, and external integrations have not been implemented.
@@ -120,12 +118,12 @@ Current status:
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `284 passed`.
+- Current test count: `308 passed` (284 SQLite + 24 PostgreSQL).
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
 - Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, and Background Job Foundation are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints for all models exist; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent exist; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: PostgreSQL compatibility verification.
+- Next milestone: CI and quality gates.
 
 ## Database Schema
 
@@ -619,7 +617,21 @@ python -m pytest
 Result:
 
 ```text
-284 passed
+308 passed (284 SQLite + 24 PostgreSQL)
+```
+
+PostgreSQL verification tests:
+
+```text
+python -m pytest tests/integration/test_postgresql_compatibility.py
+24 passed
+```
+
+Full suite against PostgreSQL:
+
+```text
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/irtiqa_verify python -m pytest
+307 passed, 1 skipped (health endpoint asserts "sqlite")
 ```
 
 Additional migration verification:
@@ -737,6 +749,10 @@ Completed:
 - Added Background Job Foundation: `jobs` table with Alembic migration, SQLAlchemy `Job` model, `JobRepository` with status transition helpers, `JobService` with scheduling/retry/cancellation logic, `JobRunner` for agent/workflow execution, `JobScheduler` for polling loop, `JobScheduleAgentRequest`/`JobScheduleWorkflowRequest` schemas, and REST endpoints for schedule/get/list/cancel/retry operations.
 - Added FastAPI lifespan integration for `JobScheduler` startup and graceful shutdown.
 - Added unit tests for retry policy, scheduler, runner, and errors; integration tests for job lifecycle and API endpoints.
+- Completed PostgreSQL Compatibility Verification: verified engine configs, Alembic migrations, constraints, CRUD, datetime, UUID, cascading, and job lifecycle against PostgreSQL 18.x.
+- Fixed migration `20260531_0002`: `recreate="always"` -> `recreate="auto"` for PostgreSQL compatibility.
+- Fixed migration `20260609_0003`: added `op.f()` wrapper to constraint names for PostgreSQL compatibility.
+- Added 24 PostgreSQL verification tests in `tests/integration/test_postgresql_compatibility.py`.
 
 Documentation currently aligned with implemented schema:
 
@@ -757,7 +773,6 @@ Known issues or gaps:
 - Agent Interface Foundation is implemented. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are completed.
 - No CI configuration exists yet.
 - No Docker or deployment configuration exists yet.
-- No PostgreSQL runtime verification has been performed.
 - No repository methods enforce domain-level validation.
 - `technology_catalog` is not implemented; `technologies` currently stores company-specific detections directly.
 - There is no dedicated `workflow_runs` table; workflow state is expected to be inferred from `agent_runs` for now.
@@ -767,7 +782,6 @@ Known issues or gaps:
 
 Recommended order:
 
-1. Add PostgreSQL compatibility check using the `postgres` optional dependency.
-2. Add CI and quality gates.
+1. Add CI and quality gates.
 
-The Background Job Foundation is complete with in-process scheduling, execution, and monitoring for agents and workflows. All five core agents are implemented. PostgreSQL verification is the next milestone.
+The Background Job Foundation is complete with in-process scheduling, execution, and monitoring for agents and workflows. All five core agents are implemented. PostgreSQL compatibility verification is complete.

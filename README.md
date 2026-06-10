@@ -6,18 +6,21 @@ Irtiqa Intelligence is a production-grade lead intelligence platform designed ar
 
 The repository currently contains:
 
-- SQLAlchemy ORM models.
-- Alembic migrations.
-- SQLite database configuration.
-- Session management.
-- Repository pattern.
+- FastAPI application with CRUD API endpoints for all entities.
+- SQLAlchemy ORM models with Alembic migrations.
+- SQLite database configuration (PostgreSQL verified).
+- Service layer with transaction boundaries.
+- Repository pattern for data access.
+- Pydantic v2 schemas for API boundaries.
+- Five production agents (Deep Scraper, Technographic, Intent Signal, Intelligence Scoring, Personalization).
+- Background job foundation with in-process scheduling.
+- Workflow foundation with `score_refresh` workflow.
+- Centralized structured logging and error handling.
 - Architecture documentation.
-
-Agent, API, scraping, and frontend implementation have not started yet.
 
 ## Architecture
 
-The current implemented schema contains eight core tables:
+The current implemented schema contains nine core tables:
 
 - `companies`
 - `contacts`
@@ -27,12 +30,14 @@ The current implemented schema contains eight core tables:
 - `intelligence_scores`
 - `outreach_messages`
 - `agent_runs`
+- `jobs`
 
 Documentation lives in:
 
 - `docs/database.md`
 - `docs/agents.md`
 - `docs/workflows.md`
+- `docs/postgresql_compatibility_verification_design.md`
 
 ## Setup
 
@@ -44,10 +49,10 @@ python -m venv .venv
 pip install -e .[dev]
 ```
 
-For PostgreSQL support later:
+For PostgreSQL support:
 
 ```bash
-pip install -e .[postgres]
+pip install "psycopg[binary]>=3.2.0"
 ```
 
 ## Configuration
@@ -58,6 +63,12 @@ Default SQLite URL:
 
 ```text
 sqlite:///database/irtiqa.db
+```
+
+To use PostgreSQL, set `DATABASE_URL`:
+
+```text
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/irtiqa
 ```
 
 ## Database Migrations
@@ -72,6 +83,20 @@ Check for schema drift:
 
 ```bash
 python -m alembic check
+```
+
+## Testing
+
+Run the full test suite:
+
+```bash
+python -m pytest
+```
+
+Run PostgreSQL compatibility tests:
+
+```bash
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/irtiqa_verify python -m pytest tests/integration/test_postgresql_compatibility.py
 ```
 
 ## Repository Boundaries

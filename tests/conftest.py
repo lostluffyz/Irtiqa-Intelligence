@@ -11,6 +11,19 @@ from alembic.config import Config
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
+
+try:
+    import psycopg  # noqa: F401
+    _HAS_PSYCOPG = True
+except ImportError:
+    _HAS_PSYCOPG = False
+
+
+postgresql_required = pytest.mark.skipif(
+    not _HAS_PSYCOPG or not os.environ.get("DATABASE_URL", "").startswith("postgresql"),
+    reason="PostgreSQL not available; set DATABASE_URL=postgresql+psycopg://... and install psycopg",
+)
+
 from app.models.agent_run import AgentRun
 from app.models.company import Company
 from app.models.contact import Contact
@@ -216,6 +229,42 @@ def outreach_message(
         confidence=0.81,
         generated_at=utc_now(),
     )
+
+
+@pytest.fixture()
+def postgresql_engine() -> Iterator[Engine]:
+    database_url = os.environ["DATABASE_URL"]
+    engine = create_engine(database_url, future=True)
+    try:
+        yield engine
+    finally:
+        engine.dispose()
+
+
+@pytest.fixture()
+def postgresql_session(postgresql_engine: Engine) -> Iterator[Session]:
+    session_factory = sessionmaker(
+        bind=postgresql_engine,
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+        class_=Session,
+    )
+    db_session = session_factory()
+    try:
+        yield db_session
+    finally:
+        db_session.rollback()
+        db_session.close()
+
+
+@pytest.fixture()
+def postgresql_alembic_config() -> Config:
+    database_url = os.environ["DATABASE_URL"]
+    config = Config(str(PROJECT_ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(PROJECT_ROOT / "database" / "migrations"))
+    config.set_main_option("sqlalchemy.url", database_url)
+    return config
 
 
 @pytest.fixture(autouse=True)

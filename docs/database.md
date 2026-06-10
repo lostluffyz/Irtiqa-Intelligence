@@ -810,6 +810,60 @@ Migration considerations:
 - Validate migrated PostgreSQL data with application-level read checks and repository integration tests before switching writes.
 - Keep the SQLite database in read-only archival storage until PostgreSQL production behavior has been verified.
 
+## PostgreSQL Compatibility
+
+PostgreSQL compatibility has been verified against PostgreSQL 18.x. The following compatibility points were confirmed:
+
+### Verified Behavior
+
+- All 4 Alembic migrations (initial schema, database hardening, website content columns, jobs table) apply cleanly to PostgreSQL.
+- All 4 migrations downgrade and re-apply cleanly (full round-trip).
+- Alembic `check` reports no new upgrade operations on PostgreSQL.
+- All 9 application tables are created with correct columns matching model metadata.
+- All check constraints are created and enforced on PostgreSQL.
+- SQLAlchemy dialect-default pool classes are correct: `NullPool` for SQLite, `QueuePool` for PostgreSQL.
+- Engine-level SQLite PRAGMAs (`check_same_thread`, `foreign_keys`, `WAL`, `busy_timeout`) are correctly gated behind `is_sqlite`.
+- 24 dedicated PostgreSQL verification tests pass.
+- Existing 284 SQLite tests all pass with no regressions.
+
+### Changes Applied
+
+Two migration files were modified to fix PostgreSQL compatibility issues found during verification:
+
+1. **`database/migrations/versions/20260531_0002_database_hardening.py`**: Changed `recreate="always"` to `recreate="auto"` in all `batch_alter_table` calls. The `always` option forced table recreation on PostgreSQL, which failed when trying to drop primary key constraints with dependent foreign keys. The `auto` option lets PostgreSQL use direct `ALTER TABLE ADD CONSTRAINT` instead.
+
+2. **`database/migrations/versions/20260609_0003_add_jobs_table.py`**: Added `op.f()` wrapper to all check constraint names in `batch_alter_table`. Without `op.f()`, Alembic batch mode prefixed constraint names with the table name, producing `ck_jobs_ck_jobs_status` instead of `ck_jobs_status`.
+
+### Known Behavioral Differences
+
+| Behavior | SQLite | PostgreSQL |
+| --- | --- | --- |
+| Check constraint enforcement | Check constraints are enforced | Check constraints are enforced identically |
+| Naive datetimes | Accepted (stored as text) | Accepted (psycopg 3 converts to session timezone) |
+| UUID storage | `String(36)` text column | `String(36)` text column |
+| Unique constraint violation | `IntegrityError` | `IntegrityError` |
+| Foreign key violation | `IntegrityError` | `IntegrityError` |
+| Connection pooling | `NullPool` (no pooling) | `QueuePool` (size=5, overflow=10) |
+
+### Running PostgreSQL Verification Tests
+
+```bash
+# Install PostgreSQL driver
+pip install "psycopg[binary]>=3.2.0"
+
+# Create a PostgreSQL database for verification
+createdb irtiqa_verify
+
+# Run migrations
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/irtiqa_verify alembic upgrade head
+
+# Run verification tests (will be skipped without DATABASE_URL)
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/irtiqa_verify python -m pytest tests/integration/test_postgresql_compatibility.py
+
+# Run full test suite against PostgreSQL
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/irtiqa_verify python -m pytest
+```
+
 ## Recommended Creation Order
 
 1. `companies`

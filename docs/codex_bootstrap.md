@@ -27,7 +27,7 @@ Repository rules:
 
 ### Quick Start for the Next Task
 
-The current milestone is "PostgreSQL Compatibility Verification". Deep Scraper, Technographic, Intent Signal, Intelligence Scoring, Personalization, and Background Job Foundation are complete. The next recommended task is PostgreSQL Compatibility Verification.
+PostgreSQL Compatibility Verification is complete. Deep Scraper, Technographic, Intent Signal, Intelligence Scoring, Personalization, and Background Job Foundation are complete. The next recommended task is CI and Quality Gates.
 
 Implemented agents:
 
@@ -272,7 +272,14 @@ Latest known full test result:
 
 ```text
 python -m pytest
-284 passed
+308 passed (284 SQLite + 24 PostgreSQL)
+```
+
+PostgreSQL verification tests:
+
+```text
+python -m pytest tests/integration/test_postgresql_compatibility.py
+24 passed
 ```
 
 Latest known migration verification:
@@ -288,7 +295,7 @@ No new upgrade operations detected.
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `284 passed`.
+- Current test count: `308 passed` (284 SQLite + 24 PostgreSQL).
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
 - Architecture status: FastAPI skeleton, CRUD API Endpoints, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, logging, errors, and backup documentation are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints exist; workflow foundation exists;
@@ -302,7 +309,7 @@ Current health:
 8.  **Database & Migrations**: Schema locked in. Hardening is in place.
 9.  **Service Layer**: Business boundaries over repositories with robust transaction scope support.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: PostgreSQL compatibility verification.
+- Next milestone: CI and quality gates.
 
 ## Current Database Schema
 
@@ -495,13 +502,13 @@ Do not:
 Next recommended task:
 
 ```text
-PostgreSQL Compatibility Verification
+CI and Quality Gates
 ```
 
 Recommended scope:
 
-- Verify migrations and repositories against PostgreSQL using the `postgres` optional dependency.
-- Add PostgreSQL integration tests.
+- Add automated linting, type-checking, and test execution pipeline.
+- Configure GitHub Actions or equivalent CI provider.
 
 ## Reference Documents
 

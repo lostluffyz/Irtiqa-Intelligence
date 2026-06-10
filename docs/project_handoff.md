@@ -460,7 +460,7 @@ python -m pytest
 Result:
 
 ```text
-284 passed
+308 passed (284 SQLite + 24 PostgreSQL)
 ```
 
 Current test coverage verifies:
@@ -523,6 +523,20 @@ Result:
 No new upgrade operations detected.
 ```
 
+PostgreSQL verification tests:
+
+```text
+python -m pytest tests/integration/test_postgresql_compatibility.py
+24 passed
+```
+
+Full suite against PostgreSQL:
+
+```text
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/irtiqa_verify python -m pytest
+307 passed, 1 expected failure (health endpoint asserts "sqlite")
+```
+
 Important test behavior:
 
 - Tests use temporary SQLite databases.
@@ -535,13 +549,13 @@ Current health:
 
 - Foundation status: healthy.
 - Stage: Backend Intelligence Agents
-- Test Count: `284 passed`
+- Test Count: `308 passed` (284 SQLite + 24 PostgreSQL)
 - Remaining work: PostgreSQL scaling, deployment.
 - Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Background Job Foundation, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are implemented; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, Agent Interface Foundation, and Background Job Foundation.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: PostgreSQL compatibility verification.
+- Next milestone: CI and quality gates.
 
 ## 6. Repository Conventions
 
@@ -752,15 +766,15 @@ Completed roadmap item:
 The next recommended task is:
 
 ```text
-PostgreSQL Compatibility Verification
+CI and Quality Gates
 ```
 
 Recommended scope:
 
-- Verify migrations and repositories against PostgreSQL using the `postgres` optional dependency.
-- Add PostgreSQL integration tests.
+- Add automated linting, type-checking, and test execution pipeline.
+- Configure GitHub Actions or equivalent CI provider.
 
-Background Job Foundation is complete. All five core agents are implemented. PostgreSQL verification is the next milestone.
+Background Job Foundation is complete. All five core agents are implemented. PostgreSQL compatibility verification is complete.
 
 ## 11. Open Issues
 
@@ -772,7 +786,6 @@ Current known gaps:
 - No frontend implementation exists yet.
 - No CI configuration exists yet.
 - No Docker or deployment configuration exists yet.
-- No PostgreSQL runtime verification has been performed.
 - No repository methods enforce domain-level validation.
 - `technology_catalog` is not implemented.
 - `technologies` currently stores company-specific detections directly.
@@ -1289,20 +1302,33 @@ Objective:
 
 - Verify migrations and repositories against PostgreSQL.
 
+Status:
+
+- Completed.
+- All 4 Alembic migrations apply cleanly to PostgreSQL 18.x.
+- All 4 migrations downgrade and re-apply cleanly (full round-trip).
+- Alembic `check` reports no new upgrade operations on PostgreSQL.
+- 24 dedicated PostgreSQL verification tests pass.
+- 284 existing SQLite tests pass with no regressions.
+- Two migration fixes applied: `recreate="always"` → `recreate="auto"` in `20260531_0002`, `op.f()` wrapper added in `20260609_0003`.
+
 Dependencies:
 
 - Stable database schema.
 - Test foundation.
 
-Files likely affected:
+Files affected:
 
 ```text
-pyproject.toml
-tests/integration/database/
+tests/integration/test_postgresql_compatibility.py
+tests/conftest.py
+database/migrations/versions/20260531_0002_database_hardening.py
+database/migrations/versions/20260609_0003_add_jobs_table.py
 docs/database.md
-README.md
 docs/project_state.md
 docs/project_handoff.md
+docs/codex_bootstrap.md
+README.md
 ```
 
 ### 13. CI and Quality Gates

@@ -59,29 +59,29 @@ def upgrade() -> None:
     # Check constraints need batch mode for SQLite
     with op.batch_alter_table("jobs") as batch_op:
         batch_op.create_check_constraint(
-            "ck_jobs_status",
+            op.f("ck_jobs_status"),
             "status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')",
         )
         batch_op.create_check_constraint(
-            "ck_jobs_job_type",
+            op.f("ck_jobs_job_type"),
             "job_type IN ('agent', 'workflow')",
         )
         batch_op.create_check_constraint(
-            "ck_jobs_retry_count",
+            op.f("ck_jobs_retry_count"),
             "retry_count <= max_retries",
         )
         batch_op.create_check_constraint(
-            "ck_jobs_max_retries",
+            op.f("ck_jobs_max_retries"),
             "max_retries >= 0",
         )
 
 
 def downgrade() -> None:
     with op.batch_alter_table("jobs") as batch_op:
-        batch_op.drop_constraint("ck_jobs_max_retries", type_="check")
-        batch_op.drop_constraint("ck_jobs_retry_count", type_="check")
-        batch_op.drop_constraint("ck_jobs_job_type", type_="check")
-        batch_op.drop_constraint("ck_jobs_status", type_="check")
+        batch_op.drop_constraint(op.f("ck_jobs_max_retries"), type_="check")
+        batch_op.drop_constraint(op.f("ck_jobs_retry_count"), type_="check")
+        batch_op.drop_constraint(op.f("ck_jobs_job_type"), type_="check")
+        batch_op.drop_constraint(op.f("ck_jobs_status"), type_="check")
 
     op.drop_index("ix_jobs_agent_run_id", table_name="jobs")
     op.drop_index("ix_jobs_target_name", table_name="jobs")
