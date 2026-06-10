@@ -1,4 +1,4 @@
-# Codex Bootstrap
+x# Codex Bootstrap
 
 Use this file first when starting a new Codex session on Irtiqa Intelligence.
 
@@ -27,9 +27,9 @@ Repository rules:
 
 ### Quick Start for the Next Task
 
-The current milestone is "Concrete Agents". Deep Scraper, Technographic, Intent Signal, Intelligence Scoring, and Personalization are complete. The next recommended task is the Background Job Foundation.
+The current milestone is "PostgreSQL Compatibility Verification". Deep Scraper, Technographic, Intent Signal, Intelligence Scoring, Personalization, and Background Job Foundation are complete. The next recommended task is PostgreSQL Compatibility Verification.
 
-Planned future agents:
+Implemented agents:
 
 1. Deep Scraper Agent
 2. Technographic Intelligence Agent
@@ -59,7 +59,8 @@ app/
 |           |-- intent_signals.py
 |           |-- intelligence_scores.py
 |           |-- outreach_messages.py
-|           `-- agent_runs.py
+|           |-- agent_runs.py
+|           `-- jobs.py
 |-- core/
 |   |-- config.py
 |   |-- errors.py
@@ -75,6 +76,7 @@ app/
 |   |-- technology.py
 |   |-- intent_signal.py
 |   |-- intelligence_score.py
+|   |-- job.py
 |   |-- outreach_message.py
 |   `-- agent_run.py
 |-- repositories/
@@ -85,6 +87,7 @@ app/
 |   |-- technology_repository.py
 |   |-- intent_signal_repository.py
 |   |-- intelligence_score_repository.py
+|   |-- job_repository.py
 |   |-- outreach_message_repository.py
 |   `-- agent_run_repository.py
 `-- services/
@@ -95,6 +98,7 @@ app/
     |-- technology_service.py
     |-- intent_signal_service.py
     |-- intelligence_score_service.py
+    |-- job_service.py
     |-- outreach_message_service.py
     `-- agent_run_service.py
 `-- agents/
@@ -112,6 +116,7 @@ app/
     |-- technology.py
     |-- intent_signal.py
     |-- intelligence_score.py
+    |-- job.py
     |-- outreach_message.py
     `-- agent_run.py
 `-- workflows/
@@ -125,6 +130,12 @@ app/
     |-- score_refresh.py
     |-- scoring_policy.py
     `-- states.py
+`-- jobs/
+    |-- __init__.py
+    |-- errors.py
+    |-- retry_policy.py
+    |-- runner.py
+    `-- scheduler.py
 ```
 
 Implemented database tooling:
@@ -137,6 +148,8 @@ database/migrations/
 `-- versions/
     |-- 20260531_0001_initial_schema.py
     `-- 20260531_0002_database_hardening.py
+    `-- 20260603_0003_add_website_content_columns.py
+    `-- 20260609_0003_add_jobs_table.py
 ```
 
 Implemented tests:
@@ -153,17 +166,35 @@ tests/
 |   |   |-- test_result.py
 |   |   |-- test_registry.py
 |   |   `-- test_base.py
+|   |-- jobs/
+|   |   |-- test_errors.py
+|   |   |-- test_retry_policy.py
+|   |   |-- test_runner.py
+|   |   `-- test_scheduler.py
 |   |-- test_models.py
-|   `-- test_schemas.py
+|   |-- test_schemas.py
+|   `-- workflows/
+|       |-- test_context.py
+|       |-- test_result.py
+|       |-- test_states.py
+|       |-- test_policies.py
+|       |-- test_registry.py
+|       |-- test_runner.py
+|       |-- test_score_refresh.py
+|       |-- test_scoring_policy.py
 `-- integration/
     |-- api/
     |   |-- test_app.py
     |   |-- test_crud_phase_1.py
     |   |-- test_crud_phase_2.py
     |   `-- test_crud_phase_3.py
+    |-- jobs/
+    |   |-- test_job_api.py
+    |   `-- test_job_lifecycle.py
     |-- test_database_hardening.py
     |-- test_migrations.py
     |-- test_repositories.py
+    |-- test_score_refresh_workflow.py
     |-- test_services.py
     `-- test_session_scope.py
 ```
@@ -189,6 +220,8 @@ Completed:
 - Task 10: Workflow Foundation Phase 1.
 - Phase 2: `score_refresh` workflow.
 - Task 11: Agent Interface Foundation.
+- Task 12: Background Job Foundation.
+- Task 12: Background Job Foundation.
 
 Implemented:
 
@@ -205,15 +238,16 @@ Implemented:
 - FastAPI health endpoint.
 - FastAPI API router structure.
 - FastAPI dependency providers.
-- FastAPI service dependency providers for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
+- FastAPI service dependency providers for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, agent runs, and jobs.
 - FastAPI structured exception handlers.
-- FastAPI lifespan startup and shutdown logging.
+- FastAPI lifespan startup and shutdown logging with JobScheduler integration.
 - CRUD API endpoints for companies, contacts, and websites.
 - CRUD API endpoints for technologies, intent signals, and intelligence scores.
 - CRUD API endpoints for outreach messages and agent runs.
-- Pagination-ready list responses for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
+- CRUD API endpoints for jobs (schedule/get/list/cancel/retry).
+- Pagination-ready list responses for all entities.
 - Centralized structured logging.
-- Structured error hierarchy.
+- Structured error hierarchy with job error types.
 - Workflow foundation.
 - Deterministic `score_refresh.v1` scoring policy.
 - Executable `score_refresh` workflow using existing persisted data.
@@ -221,16 +255,16 @@ Implemented:
 - Structured agent error hierarchy with `AgentValidationError`, `AgentNetworkError`, `AgentRateLimitError`, `AgentTimeoutError`.
 - Deep Scraper Agent with async fetching, `robots.txt` enforcement, and DOM parsing.
 - Technographic Agent with deterministic signature matching.
-- 4. Intent Signal Agent: converts signals into DB rows.
-- 5. Intelligence Scoring Agent: consumes policy scores transparently.
+- Intent Signal Agent: converts signals into DB rows.
+- Intelligence Scoring Agent: consumes policy scores transparently.
 - Personalization Agent: deterministic, multi-variant template architecture.
-- 6. Workflow Engine: supports deterministic state transitions.
-- 7. Repositories: isolated database access without commits.
+- Workflow Engine: supports deterministic state transitions.
+- Background Job Foundation: in-process job scheduling, execution, and monitoring for agents and workflows with `JobRunner`, `JobScheduler`, retry policy with exponential backoff and jitter, and REST API endpoints.
+- Repositories: isolated database access without commits.
 - Pytest foundation.
 
 Not implemented:
 
-- Jobs.
 - Frontend.
 - CI.
 
@@ -238,7 +272,7 @@ Latest known full test result:
 
 ```text
 python -m pytest
-254 passed
+284 passed
 ```
 
 Latest known migration verification:
@@ -254,18 +288,21 @@ No new upgrade operations detected.
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `245 passed`.
+- Current test count: `284 passed`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: FastAPI skeleton, CRUD API Endpoints, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, logging, errors, and backup documentation are implemented.
+- Architecture status: FastAPI skeleton, CRUD API Endpoints, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, logging, errors, and backup documentation are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints exist; workflow foundation exists;
 1.  **Agent Interface Foundation**: Standardized interfaces in `app.agents` with `BaseAgent`, context, and result structures.
 2.  **Deep Scraper Agent**: Asynchronous, robot-compliant HTTP client storing HTML in `websites` table.
 3.  **Technographic Agent**: Signature-matching technology extraction logic utilizing a 70/30 weighting logic and persisting to `technologies` table via the `TechnologyService`.
 4.  **Intent Signal Agent**: Rule-based extraction of buying signals from `websites.extracted_text` and detected technologies, persisted through `IntentSignalService`.
-5.  **Database & Migrations**: Schema locked in. Hardening is in place.
-6.  **Service Layer**: Business boundaries over repositories with robust transaction scope support.
+5.  **Intelligence Scoring Agent**: Aggregation engine consuming deterministic workflow scoring policy.
+6.  **Personalization Agent**: Multi-variant template architecture for outreach generation.
+7.  **Background Job Foundation**: In-process job scheduling, execution, and monitoring for agents and workflows.
+8.  **Database & Migrations**: Schema locked in. Hardening is in place.
+9.  **Service Layer**: Business boundaries over repositories with robust transaction scope support.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: Personalization Agent implementation.
+- Next milestone: PostgreSQL compatibility verification.
 
 ## Current Database Schema
 
@@ -279,6 +316,7 @@ Implemented tables:
 - `intelligence_scores`
 - `outreach_messages`
 - `agent_runs`
+- `jobs`
 
 Canonical names:
 
@@ -457,16 +495,13 @@ Do not:
 Next recommended task:
 
 ```text
-Personalization Agent Implementation
+PostgreSQL Compatibility Verification
 ```
 
 Recommended scope:
 
-- Implement the Personalization Agent by subclassing `BaseAgent`.
-- Generate tailored outreach copy based on all accumulated intelligence.
-- Add focused agent tests.
-- Update `docs/project_state.md`.
-- Update `docs/project_handoff.md`.
+- Verify migrations and repositories against PostgreSQL using the `postgres` optional dependency.
+- Add PostgreSQL integration tests.
 
 ## Reference Documents
 

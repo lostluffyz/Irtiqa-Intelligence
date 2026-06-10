@@ -13,6 +13,13 @@ from app.schemas.intelligence_score import (
     IntelligenceScoreRead,
     IntelligenceScoreUpdate,
 )
+from app.schemas.job import (
+    JobCreate,
+    JobList,
+    JobRead,
+    JobScheduleAgentRequest,
+    JobScheduleWorkflowRequest,
+)
 from app.schemas.outreach_message import (
     OutreachMessageCreate,
     OutreachMessageList,
@@ -43,6 +50,11 @@ __all__ = [
     "IntelligenceScoreList",
     "IntelligenceScoreRead",
     "IntelligenceScoreUpdate",
+    "JobCreate",
+    "JobList",
+    "JobRead",
+    "JobScheduleAgentRequest",
+    "JobScheduleWorkflowRequest",
     "OutreachMessageCreate",
     "OutreachMessageList",
     "OutreachMessageRead",

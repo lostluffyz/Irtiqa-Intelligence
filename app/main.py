@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from typing import AsyncContextManager
+import asyncio
 
 from fastapi import FastAPI
 
@@ -10,6 +11,10 @@ from app.api.errors import register_exception_handlers
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, get_logger
+from app.jobs import JobRunner, JobScheduler
+from app.services import JobService
+from app.agents.registry import AgentRegistry
+from app.workflows.registry import WorkflowRegistry
 
 
 APP_NAME = "Irtiqa Intelligence"
@@ -56,9 +61,25 @@ def _build_lifespan(
                 "database_is_sqlite": settings.database.is_sqlite,
             },
         )
+
+        job_service = JobService()
+        agent_registry = AgentRegistry()
+        workflow_registry = WorkflowRegistry()
+
+        job_runner = JobRunner(
+            job_service=job_service,
+            agent_registry=agent_registry,
+            workflow_registry=workflow_registry,
+            poll_interval=5.0,
+        )
+        scheduler = JobScheduler(job_runner, poll_interval=5.0)
+        scheduler_task = asyncio.create_task(scheduler.run())
+
         try:
             yield
         finally:
+            await scheduler.shutdown()
+            await scheduler_task
             logger.info("Application shutdown complete")
 
     return lifespan

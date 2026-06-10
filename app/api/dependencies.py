@@ -12,6 +12,7 @@ from app.services import (
     ContactService,
     IntelligenceScoreService,
     IntentSignalService,
+    JobService,
     OutreachMessageService,
     TechnologyService,
     WebsiteService,
@@ -60,3 +61,7 @@ def get_outreach_message_service() -> OutreachMessageService:
 
 def get_agent_run_service() -> AgentRunService:
     return AgentRunService()
+
+
+def get_job_service() -> JobService:
+    return JobService()

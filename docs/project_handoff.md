@@ -4,9 +4,9 @@ This document is the canonical handoff for Irtiqa Intelligence. It is written so
 
 ## 1. Current Repository Architecture
 
-Irtiqa Intelligence is currently in the backend foundation phase. The implemented work includes project metadata, database architecture, SQLAlchemy models, Pydantic schemas, Alembic migrations, SQLite session management, repository classes, service classes, centralized logging, structured errors, database hardening, SQLite backup strategy documentation, a FastAPI application skeleton, a health endpoint, CRUD API Endpoints Phase 1 for companies, contacts, and websites, CRUD API Endpoints Phase 2 for technologies, intent signals, and intelligence scores, CRUD API Endpoints Phase 3 for outreach messages and agent runs, workflow foundation, the concrete `score_refresh` workflow, Agent Interface Foundation, and tests.
+Irtiqa Intelligence is currently in the backend foundation phase. The implemented work includes project metadata, database architecture, SQLAlchemy models, Pydantic schemas, Alembic migrations, SQLite session management, repository classes, service classes, centralized logging, structured errors, database hardening, SQLite backup strategy documentation, a FastAPI application skeleton, a health endpoint, CRUD API Endpoints Phase 1 for companies, contacts, and websites, CRUD API Endpoints Phase 2 for technologies, intent signals, and intelligence scores, CRUD API Endpoints Phase 3 for outreach messages and agent runs, workflow foundation, the concrete `score_refresh` workflow, Agent Interface Foundation, Background Job Foundation, and tests.
 
-The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent have been implemented. Jobs, frontend, and external integrations do not exist yet.
+The CRUD API milestone is complete for all current persisted entities. Workflow foundation and `score_refresh` exist. Agent Interface Foundation with async `BaseAgent`, `AgentContext`, `AgentResult`, and `AgentRegistry` is complete. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent have been implemented. Background Job Foundation with in-process job scheduling, execution, and monitoring for agents and workflows is complete. Frontend and external integrations do not exist yet.
 
 Current repository layout:
 
@@ -49,10 +49,11 @@ Irtiqa-Intelligence/
 |   |   |-- technology.py
 |   |   |-- intent_signal.py
 |   |   |-- intelligence_score.py
+|   |   |-- job.py
 |   |   |-- outreach_message.py
 |   |   `-- agent_run.py
 |   |
-|   `-- repositories/
+|   |-- repositories/
 |       |-- __init__.py
 |       |-- base.py
 |       |-- company_repository.py
@@ -61,6 +62,7 @@ Irtiqa-Intelligence/
 |       |-- technology_repository.py
 |       |-- intent_signal_repository.py
 |       |-- intelligence_score_repository.py
+|       |-- job_repository.py
 |       |-- outreach_message_repository.py
 |       `-- agent_run_repository.py
 |
@@ -87,6 +89,7 @@ Irtiqa-Intelligence/
 |   |-- technology_service.py
 |   |-- intent_signal_service.py
 |   |-- intelligence_score_service.py
+|   |-- job_service.py
 |   |-- outreach_message_service.py
 |   `-- agent_run_service.py
 |
@@ -101,6 +104,7 @@ Irtiqa-Intelligence/
 |   |-- technology.py
 |   |-- intent_signal.py
 |   |-- intelligence_score.py
+|   |-- job.py
 |   |-- outreach_message.py
 |   `-- agent_run.py
 |
@@ -117,6 +121,13 @@ Irtiqa-Intelligence/
 |   |-- scoring_policy.py
 |   `-- states.py
 |
+|-- app/jobs/
+|   |-- __init__.py
+|   |-- errors.py
+|   |-- retry_policy.py
+|   |-- runner.py
+|   `-- scheduler.py
+|
 |-- database/
 |   `-- migrations/
 |       |-- env.py
@@ -124,6 +135,8 @@ Irtiqa-Intelligence/
 |       `-- versions/
 |           `-- 20260531_0001_initial_schema.py
 |           `-- 20260531_0002_database_hardening.py
+|           `-- 20260603_0003_add_website_content_columns.py
+|           `-- 20260609_0003_add_jobs_table.py
 |
 |-- docs/
 |   |-- agents.md
@@ -138,11 +151,13 @@ Irtiqa-Intelligence/
 |   |-- unit/
 |   |   |-- __init__.py
 |   |   |-- core/
+|   |   |-- jobs/
 |   |   |-- test_models.py
 |   |   `-- test_schemas.py
 |   `-- integration/
 |       |-- __init__.py
 |       |-- api/
+|       |-- jobs/
 |       |-- test_database_hardening.py
 |       |-- test_migrations.py
 |       |-- test_repositories.py
@@ -177,6 +192,7 @@ Implemented tables:
 6. `intelligence_scores`
 7. `outreach_messages`
 8. `agent_runs`
+9. `jobs`
 
 ### Schema Relationships
 
@@ -204,8 +220,11 @@ agent_runs 1--many technologies
 agent_runs 1--many intent_signals
 agent_runs 1--many intelligence_scores
 agent_runs 1--many outreach_messages
+agent_runs 1--many jobs
 
 intelligence_scores 1--many outreach_messages
+
+jobs 1--many agent_runs (optional, nullable)
 ```
 
 ### Table Purpose Summary
@@ -241,6 +260,10 @@ Stores outreach message drafts and personalization outputs. This replaces the ea
 `agent_runs`
 
 Stores execution history for future agents and workflows. Until a dedicated workflow table exists, workflow status should be inferred from relevant agent run records.
+
+`jobs`
+
+Stores scheduled background jobs for agent and workflow execution. Jobs are retryable, cancellable, and link to `agent_runs` for observability.
 
 ### Database Design Decisions
 
@@ -424,6 +447,7 @@ Completed Agent Interface Foundation:
 - 5. **Intelligence Scoring Agent**: Aggregation engine that imports the deterministic workflow scoring policy to produce intelligence scores.
 - 6. **Database & Migrations**: Schema locked in. Database hardening done.
 - 7. **Service Layer**: Business boundaries over repositories with transaction scope support.
+- 8. **Background Job Foundation**: In-process job scheduling, execution, and monitoring for agents and workflows. Includes `jobs` table with Alembic migration, `Job` model, `JobRepository`, `JobService` with scheduling/retry/cancellation, `JobRunner` for agent/workflow execution, `JobScheduler` for polling loop, REST endpoints for schedule/get/list/cancel/retry, and FastAPI lifespan integration.
 
 ## 4. Test Results
 
@@ -436,7 +460,7 @@ python -m pytest
 Result:
 
 ```text
-245 passed
+284 passed
 ```
 
 Current test coverage verifies:
@@ -511,13 +535,13 @@ Current health:
 
 - Foundation status: healthy.
 - Stage: Backend Intelligence Agents
-- Test Count: `245 passed`
-- Remaining work: Background job orchestration, remaining agents (Personalization), PostgreSQL scaling, deployment.
-- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, and Intelligence Scoring Agent are implemented; jobs, frontend, and remaining concrete agents are intentionally not implemented yet.
-- Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, and Agent Interface Foundation.
+- Test Count: `284 passed`
+- Remaining work: PostgreSQL scaling, deployment.
+- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Background Job Foundation, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are implemented; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
+- Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, Agent Interface Foundation, and Background Job Foundation.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: concrete agent implementation or background job foundation.
+- Next milestone: PostgreSQL compatibility verification.
 
 ## 6. Repository Conventions
 
@@ -720,39 +744,23 @@ Completed roadmap item:
 - Workflow foundation.
 - `score_refresh` workflow.
 - Agent Interface Foundation.
+- Background Job Foundation.
+- PostgreSQL Compatibility Verification.
 
 ## 10. Next Recommended Task
 
 The next recommended task is:
 
 ```text
-Concrete Agent Implementation
+PostgreSQL Compatibility Verification
 ```
 
 Recommended scope:
 
-- Implement the Personalization Agent by subclassing `BaseAgent`.
-- Define personalization templates and placeholders.
+- Verify migrations and repositories against PostgreSQL using the `postgres` optional dependency.
+- Add PostgreSQL integration tests.
 
-Alternative next task:
-
-```text
-Background Job Foundation
-```
-
-Recommended scope:
-
-- Add a job scheduling layer for long-running agent execution.
-- Integrate with existing workflow and agent foundations.
-- Do not add scraping, frontend, or external API calls yet.
-
-Why concrete agents or job foundation are next:
-
-- The full CRUD API milestone is implemented and tested.
-- Workflow foundation and `score_refresh` are implemented and tested.
-- Agent Interface Foundation is implemented and tested.
-- Deep Scraper, Technographic, Intent Signal, and Intelligence Scoring Agents are completed.
-- Concrete agents or job scheduling are the next boundaries.
+Background Job Foundation is complete. All five core agents are implemented. PostgreSQL verification is the next milestone.
 
 ## 11. Open Issues
 
@@ -760,9 +768,7 @@ Current known gaps:
 
 - CRUD API routes currently exist for all current persisted entities: companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
 - Workflow foundation, workflow runner, and `score_refresh` exist.
-- **1. Background Orchestration**
-- The foundation is built. We need a celery/arq equivalent or a cron system to orchestrate workflows and agents.
-- Agents (Deep Scraper, Technographic) are synchronous to the runner for now but designed for asynchronous invocation.
+- Background Job Foundation is implemented with in-process scheduling.
 - No frontend implementation exists yet.
 - No CI configuration exists yet.
 - No Docker or deployment configuration exists yet.
@@ -830,12 +836,7 @@ These initial agents established the standard execution pattern for scraping web
 
 Recommended order:
 
-1. Personalization Agent.
-
-Reason:
-
-- The platform now has scraped text, detected technologies, and persisted intent signals.
-- The remaining agents will score that intelligence and generate outreach-ready messages.
+(No pending agents — all five core agents are implemented.)
 
 Future agent output mapping:
 
@@ -1262,6 +1263,10 @@ Objective:
 
 - Prepare long-running execution.
 
+Status:
+
+- Completed.
+
 Dependencies:
 
 - Workflow layer.
@@ -1272,6 +1277,7 @@ Files likely affected:
 ```text
 app/jobs/
 tests/unit/jobs/
+tests/integration/jobs/
 docs/workflows.md
 docs/project_state.md
 docs/project_handoff.md

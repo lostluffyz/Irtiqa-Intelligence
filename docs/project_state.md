@@ -13,18 +13,19 @@ Current architectural direction:
 ### Backend
 *   **FastAPI**: Configured and running.
 *   **Database**: SQLite with SQLAlchemy 2.0 and Alembic.
-*   **Models**: `Company`, `Website`, `Technology`, `IntentSignal`.
-*   **Service Layer**: `CompanyService`, `WebsiteService`, `TechnologyService`, `IntentSignalService`, `AgentRunService` implemented.
+*   **Models**: `Company`, `Website`, `Technology`, `IntentSignal`, `Job`.
+*   **Service Layer**: `CompanyService`, `WebsiteService`, `TechnologyService`, `IntentSignalService`, `AgentRunService`, `JobService` implemented.
 *   **Agent Interface Foundation**: Standardized abstractions via `app.agents` (`BaseAgent`, `AgentContext`, `AgentResult`).
 *   **Deep Scraper Agent**: Core crawling, parsing, and structured data persistence implemented and tested.
 *   **Technographic Agent**: Signature-based technology detection implemented and tested.
 *   **Intent Signal Agent**: Rule-based commercial buying signal detection implemented and tested.
 *   **Intelligence Scoring Agent**: Aggregation of fit, intent, technographic, and engagement scores utilizing the DeterministicScoreRefreshPolicy.
 *   **Personalization Agent**: Generation of tailored, multi-variant outreach copy based on all accumulated intelligence.
+*   **Background Job Foundation**: In-process job scheduling, execution, and monitoring for agents and workflows implemented and tested.
 
 ### Next Steps
 
-1.  **Background Job Foundation**: Orchestration layer for long-running agent execution.
+1.  **PostgreSQL Compatibility Verification**: Verify migrations and repositories against PostgreSQL.
 
 - Technographic Intelligence Agent implemented and tested with 40+ signatures across 8 categories.
 - Personalization Agent implemented and tested with deterministic multi-variant template architecture.
@@ -108,26 +109,27 @@ Current status:
 - Intent Signal Agent is complete.
 - Intelligence Scoring Agent is complete.
 - Personalization Agent is complete.
-- Current full test suite result is `254 passed`.
+- Task 12, Background Job Foundation, is complete.
+- Current full test suite result is `284 passed`.
 - Alembic schema drift check reports no new upgrade operations after upgrading to head.
 - Generated artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` should remain uncommitted.
-- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are complete. Jobs, scraping orchestration, frontend, and external integrations have not been implemented.
+- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are complete. Background Job Foundation is complete. Scraping orchestration, frontend, and external integrations have not been implemented.
 
 ## Repository Health Summary
 
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `254 passed`.
+- Current test count: `284 passed`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for all models exist; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent exist.
+- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, and Background Job Foundation are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints for all models exist; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent exist; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: Background job foundation.
+- Next milestone: PostgreSQL compatibility verification.
 
 ## Database Schema
 
-The implemented schema contains eight core tables:
+The implemented schema contains nine core tables:
 
 - `companies`
 - `contacts`
@@ -137,6 +139,7 @@ The implemented schema contains eight core tables:
 - `intelligence_scores`
 - `outreach_messages`
 - `agent_runs`
+- `jobs`
 
 Relationship summary:
 
@@ -164,8 +167,11 @@ agent_runs 1--many technologies
 agent_runs 1--many intent_signals
 agent_runs 1--many intelligence_scores
 agent_runs 1--many outreach_messages
+agent_runs 1--many jobs
 
 intelligence_scores 1--many outreach_messages
+
+jobs 1--many agent_runs (optional, nullable)
 ```
 
 Schema design choices:
@@ -226,6 +232,7 @@ Implemented SQLAlchemy models in `app/models/`:
 - `technology.py`
 - `intent_signal.py`
 - `intelligence_score.py`
+- `job.py`
 - `outreach_message.py`
 - `agent_run.py`
 
@@ -516,6 +523,8 @@ Implemented Alembic setup:
 - `database/migrations/script.py.mako`
 - `database/migrations/versions/20260531_0001_initial_schema.py`
 - `database/migrations/versions/20260531_0002_database_hardening.py`
+- `database/migrations/versions/20260603_0003_add_website_content_columns.py`
+- `database/migrations/versions/20260609_0003_add_jobs_table.py`
 
 ### Tests
 
@@ -527,6 +536,8 @@ Implemented pytest foundation in `tests/`:
 - `tests/integration/api/test_crud_phase_1.py`
 - `tests/integration/api/test_crud_phase_2.py`
 - `tests/integration/api/test_crud_phase_3.py`
+- `tests/integration/jobs/test_job_api.py`
+- `tests/integration/jobs/test_job_lifecycle.py`
 - `tests/unit/workflows/test_context.py`
 - `tests/unit/workflows/test_result.py`
 - `tests/unit/workflows/test_states.py`
@@ -544,6 +555,10 @@ Implemented pytest foundation in `tests/`:
 - `tests/integration/test_score_refresh_workflow.py`
 - `tests/integration/test_services.py`
 - `tests/integration/test_session_scope.py`
+- `tests/unit/jobs/test_errors.py`
+- `tests/unit/jobs/test_retry_policy.py`
+- `tests/unit/jobs/test_runner.py`
+- `tests/unit/jobs/test_scheduler.py`
 
 Coverage currently verifies:
 
@@ -604,7 +619,7 @@ python -m pytest
 Result:
 
 ```text
-245 passed
+284 passed
 ```
 
 Additional migration verification:
@@ -719,6 +734,9 @@ Completed:
 - Added deterministic intent rule registry covering hiring, growth, expansion, funding, product launch, partnership, enterprise readiness, and digital transformation signals.
 - Added intent signal normalization, confidence scoring, strength scoring, in-run deduplication, cross-run duplicate suppression through `IntentSignalService`, and unit tests.
 - Implemented Intelligence Scoring Agent utilizing `DeterministicScoreRefreshPolicy` to compute `IntelligenceScore`s transparently.
+- Added Background Job Foundation: `jobs` table with Alembic migration, SQLAlchemy `Job` model, `JobRepository` with status transition helpers, `JobService` with scheduling/retry/cancellation logic, `JobRunner` for agent/workflow execution, `JobScheduler` for polling loop, `JobScheduleAgentRequest`/`JobScheduleWorkflowRequest` schemas, and REST endpoints for schedule/get/list/cancel/retry operations.
+- Added FastAPI lifespan integration for `JobScheduler` startup and graceful shutdown.
+- Added unit tests for retry policy, scheduler, runner, and errors; integration tests for job lifecycle and API endpoints.
 
 Documentation currently aligned with implemented schema:
 
@@ -736,7 +754,7 @@ Known issues or gaps:
 
 - CRUD API routes currently exist for all current persisted entities: companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
 - Workflow foundation, runner, and `score_refresh` exist.
-- Agent Interface Foundation is implemented. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, and Intelligence Scoring Agent are completed.
+- Agent Interface Foundation is implemented. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are completed.
 - No CI configuration exists yet.
 - No Docker or deployment configuration exists yet.
 - No PostgreSQL runtime verification has been performed.
@@ -749,8 +767,7 @@ Known issues or gaps:
 
 Recommended order:
 
-1. Implement remaining agents (Personalization).
-2. Add background job foundation for long-running execution.
-3. Add PostgreSQL compatibility check using the `postgres` optional dependency.
+1. Add PostgreSQL compatibility check using the `postgres` optional dependency.
+2. Add CI and quality gates.
 
-The Agent Interface Foundation and first four core agents are in place. Concrete agents can now be fully integrated with background orchestration.
+The Background Job Foundation is complete with in-process scheduling, execution, and monitoring for agents and workflows. All five core agents are implemented. PostgreSQL verification is the next milestone.

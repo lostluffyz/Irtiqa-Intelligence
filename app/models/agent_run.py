@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.models.contact import Contact
     from app.models.intent_signal import IntentSignal
     from app.models.intelligence_score import IntelligenceScore
+    from app.models.job import Job
     from app.models.outreach_message import OutreachMessage
     from app.models.technology import Technology
 
@@ -62,3 +63,4 @@ class AgentRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     outreach_messages: Mapped[list[OutreachMessage]] = relationship(
         back_populates="agent_run",
     )
+    jobs: Mapped[list[Job]] = relationship(back_populates="agent_run")

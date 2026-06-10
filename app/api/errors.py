@@ -14,6 +14,7 @@ from app.core.errors import (
     EntityConflictError,
     EntityNotFoundError,
     IrtiqaError,
+    ServiceError,
     ValidationError,
 )
 from app.core.logging import get_logger
@@ -69,7 +70,7 @@ async def handle_unhandled_error(request: Request, exc: Exception) -> JSONRespon
 def _status_code_for_error(exc: IrtiqaError) -> int:
     if isinstance(exc, EntityNotFoundError):
         return status.HTTP_404_NOT_FOUND
-    if isinstance(exc, EntityConflictError):
+    if isinstance(exc, (EntityConflictError, ServiceError)):
         return status.HTTP_409_CONFLICT
     if isinstance(exc, ValidationError):
         return status.HTTP_422_UNPROCESSABLE_ENTITY
