@@ -5,15 +5,24 @@ from datetime import datetime, timezone
 from typing import Any, TypeVar, cast
 
 from app.core.errors import IrtiqaError, WorkflowError
+from app.core.logging import get_logger
 from app.models.agent_run import AgentRun
 from app.models.company import Company
 from app.models.contact import Contact
+from app.models.evidence_record import (
+    EVIDENCE_TYPE_COMPUTED_METRIC,
+    RELATIONSHIP_CONTRIBUTES_TO,
+    SOURCE_TYPE_AGENT_RUN,
+    TARGET_TYPE_INTELLIGENCE_SCORE,
+)
 from app.models.intent_signal import IntentSignal
 from app.models.technology import Technology
+from app.schemas.evidence import EvidenceItem
 from app.services import (
     AgentRunService,
     CompanyService,
     ContactService,
+    EvidenceService,
     IntelligenceScoreService,
     IntentSignalService,
     TechnologyService,
@@ -40,6 +49,7 @@ class ScoreRefreshWorkflow(Workflow):
 
     def __init__(self, **services: Any) -> None:
         super().__init__(**services)
+        self.logger = get_logger(f"workflows.{self.name}")
         self.policy = DeterministicScoreRefreshPolicy()
 
     def execute(self, context: WorkflowContext) -> WorkflowResult:
@@ -101,6 +111,56 @@ class ScoreRefreshWorkflow(Workflow):
                 rationale=policy_result.rationale,
                 scored_at=policy_result.scored_at,
             )
+            # ── Evidence recording ─────────────────────────────────────
+            try:
+                evidence_items: list[EvidenceItem] = []
+                for tech in technologies:
+                    evidence_items.append(
+                        EvidenceItem(
+                            source_type=SOURCE_TYPE_AGENT_RUN,
+                            source_id=agent_run.id,
+                            source_detail=f"Technology: {tech.name} (category={tech.category}, confidence={tech.confidence})",
+                            evidence_type=EVIDENCE_TYPE_COMPUTED_METRIC,
+                            evidence_value=f"technology={tech.id}, name={tech.name}, confidence={tech.confidence}",
+                            relationship_type=RELATIONSHIP_CONTRIBUTES_TO,
+                            target_type=TARGET_TYPE_INTELLIGENCE_SCORE,
+                            target_id=score.id,
+                            confidence=tech.confidence,
+                        )
+                    )
+                for signal in intent_signals:
+                    evidence_items.append(
+                        EvidenceItem(
+                            source_type=SOURCE_TYPE_AGENT_RUN,
+                            source_id=agent_run.id,
+                            source_detail=f"Intent signal: {signal.signal_name} (type={signal.signal_type}, strength={signal.strength})",
+                            evidence_type=EVIDENCE_TYPE_COMPUTED_METRIC,
+                            evidence_value=f"intent_signal={signal.id}, name={signal.signal_name}, strength={signal.strength}",
+                            relationship_type=RELATIONSHIP_CONTRIBUTES_TO,
+                            target_type=TARGET_TYPE_INTELLIGENCE_SCORE,
+                            target_id=score.id,
+                            confidence=signal.confidence,
+                        )
+                    )
+
+                evidence_service = EvidenceService()
+                evidence_service.record_evidence_batch(
+                    items=evidence_items,
+                    agent_run_id=agent_run.id,
+                    company_id=normalized_company_id,
+                    contact_id=normalized_contact_id,
+                )
+            except Exception:
+                self.logger.warning(
+                    "Evidence recording failed, workflow execution continues",
+                    extra={
+                        "workflow_name": self.name,
+                        "agent_run_id": agent_run.id,
+                        "evidence_count": len(technologies) + len(intent_signals),
+                    },
+                    exc_info=True,
+                )
+
             agent_run_service.mark_succeeded(
                 agent_run.id,
                 output_summary=f"Created intelligence score {score.id}.",

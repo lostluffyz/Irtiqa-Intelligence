@@ -21,6 +21,7 @@ Irtiqa Intelligence uses a SQLite-first relational database with SQLAlchemy as t
 - `intent_signals`
 - `intelligence_scores`
 - `outreach_messages`
+- `evidence_records`
 - `agent_runs`
 
 ## Entity Relationship Diagram
@@ -45,6 +46,7 @@ erDiagram
     technologies ||--o{ intent_signals : influences
     technologies ||--o{ intelligence_scores : contributes_to
 
+    agent_runs ||--o{ evidence_records : produces
     agent_runs ||--o{ intent_signals : produces
     agent_runs ||--o{ intelligence_scores : produces
     agent_runs ||--o{ outreach_messages : produces
@@ -626,6 +628,54 @@ Data rule:
 
 - Outreach messages should retain the exact intelligence score reference used at generation time when available.
 
+## evidence_records
+
+Stores provenance links between intelligence outputs and the source evidence that produced them. Every evidence record maps a source entity to a target entity with a typed relationship and supporting content.
+
+| Column | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `id` | UUID/Text | Yes | Primary key. |
+| `source_type` | Text | Yes | Discriminator: `website`, `agent_run`, `job`. |
+| `source_id` | UUID/Text | Yes | Polymorphic FK to the source entity. |
+| `source_detail` | Text | No | Free-text description of the source (e.g., "extracted_text paragraph 3"). |
+| `source_location_type` | Text | No | Structured location method: `css_selector`, `xpath`, `line_number`, `paragraph_index`, `url_fragment`. |
+| `source_location_value` | Text | No | Structured location value (e.g., `#main > p:nth-child(3)`). |
+| `evidence_type` | Text | Yes | Type: `html_snippet`, `text_excerpt`, `url_match`, `signature_match`, `computed_metric`, `agent_summary`. |
+| `evidence_value` | Text | Yes | The actual evidence excerpt (max ~5000 characters). Full raw content remains in source tables. |
+| `evidence_hash` | Text | No | SHA-256 hex digest of `evidence_value` for deduplication. |
+| `relationship_type` | Text | Yes | How this evidence relates to its target: `supports`, `contradicts`, `contributes_to`, `generates`. |
+| `target_type` | Text | Yes | Target discriminator: `technology`, `intent_signal`, `intelligence_score`, `outreach_message`. |
+| `target_id` | UUID/Text | Yes | Polymorphic FK to the target entity. |
+| `confidence` | Real | Yes | Confidence in this evidence from `0.0` to `1.0`. |
+| `agent_run_id` | UUID/Text | No | Declarative FK to `agent_runs.id` with `ON DELETE SET NULL`. |
+| `company_id` | UUID/Text | No | Denormalized for efficient per-company queries. |
+| `contact_id` | UUID/Text | No | Denormalized for efficient per-contact queries. |
+| `created_at` | DateTime | Yes | UTC timestamp. |
+
+Relationships:
+
+- Many evidence records may be produced by one agent run.
+- Evidence records use polymorphic source and target FKs (application-enforced, not declarative).
+
+Indexes:
+
+- Composite index on `target_type`, `target_id`.
+- Composite index on `source_type`, `source_id`.
+- Index on `evidence_type`.
+- Index on `relationship_type`.
+- Index on `agent_run_id`.
+- Index on `company_id`.
+- Index on `contact_id`.
+- Index on `evidence_hash`.
+- Index on `target_type`.
+- Index on `created_at`.
+- Composite index on `source_location_type`, `source_location_value`.
+
+Data rules:
+
+- Evidence recording is additive and non-blocking. If evidence recording fails, the source agent execution still succeeds.
+- Deduplication uses SHA-256 of `evidence_value` within the same `target_type`/`target_id` scope. Deduplication works across separate transactions, not within a single unflushed batch.
+
 ## agent_runs
 
 Stores execution history for all agents.
@@ -690,6 +740,7 @@ Indexes:
 | `agent_runs` | `intent_signals` | One-to-many, optional |
 | `agent_runs` | `intelligence_scores` | One-to-many, optional |
 | `agent_runs` | `outreach_messages` | One-to-many, optional |
+| `agent_runs` | `evidence_records` | One-to-many, optional |
 | `intelligence_scores` | `outreach_messages` | One-to-many, optional |
 
 ## Recommended Query Patterns
@@ -779,6 +830,7 @@ Implemented check constraints:
 | `intent_signals` | `strength` and `confidence` must be between `0.0` and `1.0`. |
 | `intelligence_scores` | score components must be between `0.0` and `100.0`; `confidence` must be between `0.0` and `1.0`. |
 | `outreach_messages` | `status` must be `draft`, `ready_for_review`, `approved`, `sent`, or `archived`; `confidence` must be between `0.0` and `1.0`. |
+| `evidence_records` | `evidence_type` must be `html_snippet`, `text_excerpt`, `url_match`, `signature_match`, `computed_metric`, or `agent_summary`; `relationship_type` must be `supports`, `contradicts`, `contributes_to`, or `generates`; `confidence` must be between `0.0` and `1.0`. |
 
 ## Migration Path to PostgreSQL
 
@@ -816,10 +868,10 @@ PostgreSQL compatibility has been verified against PostgreSQL 18.x. The followin
 
 ### Verified Behavior
 
-- All 4 Alembic migrations (initial schema, database hardening, website content columns, jobs table) apply cleanly to PostgreSQL.
-- All 4 migrations downgrade and re-apply cleanly (full round-trip).
+- All 5 Alembic migrations (initial schema, database hardening, website content columns, jobs table, evidence records) apply cleanly to PostgreSQL.
+- All 5 migrations downgrade and re-apply cleanly (full round-trip).
 - Alembic `check` reports no new upgrade operations on PostgreSQL.
-- All 9 application tables are created with correct columns matching model metadata.
+- All 10 application tables are created with correct columns matching model metadata.
 - All check constraints are created and enforced on PostgreSQL.
 - SQLAlchemy dialect-default pool classes are correct: `NullPool` for SQLite, `QueuePool` for PostgreSQL.
 - Engine-level SQLite PRAGMAs (`check_same_thread`, `foreign_keys`, `WAL`, `busy_timeout`) are correctly gated behind `is_sqlite`.

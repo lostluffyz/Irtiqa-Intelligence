@@ -191,8 +191,9 @@ Implemented tables:
 5. `intent_signals`
 6. `intelligence_scores`
 7. `outreach_messages`
-8. `agent_runs`
-9. `jobs`
+8. `evidence_records`
+9. `agent_runs`
+10. `jobs`
 
 ### Schema Relationships
 
@@ -220,6 +221,7 @@ agent_runs 1--many technologies
 agent_runs 1--many intent_signals
 agent_runs 1--many intelligence_scores
 agent_runs 1--many outreach_messages
+agent_runs 1--many evidence_records
 agent_runs 1--many jobs
 
 intelligence_scores 1--many outreach_messages
@@ -256,6 +258,10 @@ Stores versioned score records for companies and optional contacts. Scores are i
 `outreach_messages`
 
 Stores outreach message drafts and personalization outputs. This replaces the earlier planning term `personalization_outputs`.
+
+`evidence_records`
+
+Stores provenance links between intelligence outputs and the source evidence that produced them. Uses a polymorphic discriminator pattern (`source_type`, `target_type`) to link any source entity to any target entity with typed relationships (`supports`, `contradicts`, `contributes_to`, `generates`). Evidence recording is additive and non-blocking — agent execution continues if evidence recording fails.
 
 `agent_runs`
 
@@ -460,7 +466,7 @@ python -m pytest
 Result:
 
 ```text
-308 passed (284 SQLite + 24 PostgreSQL)
+316 passed (292 SQLite + 24 PostgreSQL)
 ```
 
 Current test coverage verifies:
@@ -549,11 +555,11 @@ Current health:
 
 - Foundation status: healthy.
 - Stage: Backend Intelligence Agents
-- Test Count: `308 passed` (284 SQLite + 24 PostgreSQL)
+- Test Count: `316 passed` (292 SQLite + 24 PostgreSQL)
 - Remaining work: PostgreSQL scaling, deployment.
-- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Background Job Foundation, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
-- CI status: GitHub Actions workflow configured with ruff (advisory), mypy (advisory), compileall validation, and full test suite (308 tests: 284 SQLite + 24 PostgreSQL) on every push and pull request. Ruff and mypy are advisory to allow incremental debt reduction; test execution is the primary merge gate.
-- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are implemented; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
+- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Background Job Foundation, Evidence Records System, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
+- CI status: GitHub Actions workflow configured with ruff (advisory), mypy (advisory), compileall validation, and full test suite (316 tests: 292 SQLite + 24 PostgreSQL) on every push and pull request. Ruff and mypy are advisory to allow incremental debt reduction; test execution is the primary merge gate.
+- Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; evidence API endpoints (by target, source, company, agent run, summary, detail) exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are implemented; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, Agent Interface Foundation, and Background Job Foundation.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
 - Next milestone: external integrations and orchestration.
@@ -723,14 +729,17 @@ Implications:
 - `agent_runs` is the initial observability mechanism.
 - A later `agent_run_events` table may be useful, but it is not currently implemented.
 
-### Decision: No Evidence Table Yet
+### Decision: Evidence Records Table
 
-There is no `source_observations` table.
+Evidence records are stored in the `evidence_records` table using a polymorphic discriminator pattern. The table links intelligence outputs (scores, signals, technologies, messages) to their source evidence through typed relationships (`supports`, `contradicts`, `contributes_to`, `generates`).
 
 Implications:
 
-- Current evidence references live in fields such as `websites.url`, `intent_signals.source_url`, and run summaries.
-- A dedicated evidence table can be added later if agents need richer provenance.
+- Evidence recording is additive and non-blocking. Agent execution is not affected if evidence recording fails.
+- `source_id` and `target_id` are polymorphic references without declarative foreign keys (application-enforced).
+- `agent_run_id` is a declarative foreign key with `ON DELETE SET NULL`.
+- `company_id` and `contact_id` are denormalized for efficient per-company/per-contact queries.
+- Evidence values are stored as excerpts (max ~5000 characters). Full raw content remains in source tables.
 
 ## 9. Current Roadmap
 
@@ -781,7 +790,6 @@ Current known gaps:
 - `technology_catalog` is not implemented.
 - `technologies` currently stores company-specific detections directly.
 - No dedicated `workflow_runs` table exists.
-- No dedicated `source_observations` or evidence table exists.
 - No dedicated `agent_run_events` table exists.
 - `database/irtiqa.db` should remain uncommitted and generated locally only.
 
@@ -1296,8 +1304,8 @@ Objective:
 Status:
 
 - Completed.
-- All 4 Alembic migrations apply cleanly to PostgreSQL 18.x.
-- All 4 migrations downgrade and re-apply cleanly (full round-trip).
+- All 5 Alembic migrations apply cleanly to PostgreSQL 18.x.
+- All 5 migrations downgrade and re-apply cleanly (full round-trip).
 - Alembic `check` reports no new upgrade operations on PostgreSQL.
 - 24 dedicated PostgreSQL verification tests pass.
 - 284 existing SQLite tests pass with no regressions.
@@ -1336,7 +1344,7 @@ Implementation:
 - Two jobs: `validate` (ruff advisory, mypy advisory, compileall) and `test` (SQLite upgrade, alembic check, SQLite pytest, PostgreSQL 18 service container with migrations and compatibility tests)
 - Ruff and mypy are in advisory mode (`continue-on-error: true`) to allow incremental debt reduction. Test execution is the primary merge gate. A future milestone will enforce all checks after pre-existing code quality issues are resolved.
 - Triggers on push and pull request to `main`
-- 308 total tests: 284 SQLite + 24 PostgreSQL
+- 316 total tests: 292 SQLite + 24 PostgreSQL
 
 ### 14. Concrete Agent Implementation
 

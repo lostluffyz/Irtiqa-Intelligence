@@ -10,6 +10,7 @@ from app.services import (
     AgentRunService,
     CompanyService,
     ContactService,
+    EvidenceService,
     IntelligenceScoreService,
     IntentSignalService,
     JobService,
@@ -65,3 +66,7 @@ def get_agent_run_service() -> AgentRunService:
 
 def get_job_service() -> JobService:
     return JobService()
+
+
+def get_evidence_service() -> EvidenceService:
+    return EvidenceService()

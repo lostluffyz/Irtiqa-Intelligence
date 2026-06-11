@@ -1,6 +1,7 @@
 from app.services.agent_run_service import AgentRunService
 from app.services.base import BaseService
 from app.services.company_service import CompanyService
+from app.services.evidence_service import EvidenceService
 from app.services.contact_service import ContactService
 from app.services.intent_signal_service import IntentSignalService
 from app.services.intelligence_score_service import IntelligenceScoreService
@@ -14,6 +15,7 @@ __all__ = [
     "BaseService",
     "CompanyService",
     "ContactService",
+    "EvidenceService",
     "IntentSignalService",
     "IntelligenceScoreService",
     "JobService",

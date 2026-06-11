@@ -258,6 +258,44 @@ flowchart TD
     Personalization --> Runs
 ```
 
+## Evidence Recording
+
+Every agent execution automatically creates `evidence_records` that link intelligence outputs to their source data. Evidence recording happens in `BaseAgent.execute()` after `_run()` succeeds.
+
+### How It Works
+
+1. An agent's `_run()` method returns an `AgentRunOutput` dict that may include an optional `evidence` key.
+2. After `_run()` succeeds, `BaseAgent.execute()` calls `EvidenceService.record_evidence_batch()` with any returned evidence items.
+3. The service injects `agent_run_id`, `company_id`, and `contact_id` from the agent context automatically.
+4. If evidence recording fails, the agent execution is **not** affected — the error is logged as a warning and the agent continues.
+
+### EvidenceItem Contract
+
+```python
+class EvidenceItem(TypedDict):
+    source_type: str      # "website", "agent_run", "job"
+    source_id: str        # UUID of the source entity
+    source_detail: str    # Human-readable description
+    evidence_type: str    # "html_snippet", "text_excerpt", "url_match",
+                          # "signature_match", "computed_metric", "agent_summary"
+    evidence_value: str   # The excerpt or computed value
+    relationship_type: str  # "supports", "contradicts", "contributes_to", "generates"
+    target_type: str      # "technology", "intent_signal", "intelligence_score",
+                          # "outreach_message"
+    target_id: str        # UUID of the output entity this evidence supports
+    confidence: float     # 0.0–1.0
+```
+
+### Agent Requirements
+
+- Agents **may** return evidence in their `AgentRunOutput`. The `evidence` key is optional.
+- Agents that do not return evidence continue to work unchanged.
+- Evidence is supplementary — it enhances auditability but is not required for correct agent execution.
+
+### Storage
+
+Evidence records are stored in the `evidence_records` table and are queryable through the evidence API endpoints.
+
 ## Confidence Model
 
 | Field | Table | Meaning |

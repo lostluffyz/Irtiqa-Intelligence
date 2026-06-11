@@ -6,6 +6,7 @@ from app.models import Base
 from app.models.agent_run import AgentRun
 from app.models.company import Company
 from app.models.contact import Contact
+from app.models.evidence_record import EvidenceRecord
 from app.models.intent_signal import IntentSignal
 from app.models.intelligence_score import IntelligenceScore
 from app.models.job import Job
@@ -19,6 +20,7 @@ def test_model_metadata_contains_current_schema_tables() -> None:
         "agent_runs",
         "companies",
         "contacts",
+        "evidence_records",
         "intelligence_scores",
         "intent_signals",
         "jobs",
@@ -33,6 +35,7 @@ def test_models_have_primary_key_and_timestamps() -> None:
         AgentRun,
         Company,
         Contact,
+        EvidenceRecord,
         IntentSignal,
         IntelligenceScore,
         OutreachMessage,

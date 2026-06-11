@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Any, TypedDict, TypeVar, cast
+from typing import Any, NotRequired, TypedDict, TypeVar, cast
 import time
 
 from app.agents.context import AgentContext
@@ -15,6 +15,7 @@ from app.core.errors import (
     IrtiqaError,
 )
 from app.core.logging import get_logger
+from app.schemas.evidence import EvidenceItem
 from app.services import AgentRunService
 
 
@@ -26,9 +27,13 @@ class AgentRunOutput(TypedDict):
 
     Concrete agents return this structure so they do not need to
     construct the full ``AgentResult`` object themselves.
+
+    ``evidence`` is optional via ``NotRequired``. Agents that do not
+    produce evidence omit the key entirely.
     """
 
     output_ids: dict[str, list[str]]
+    evidence: NotRequired[list[EvidenceItem]]
     summary: str
     stats: dict[str, Any]
 
@@ -92,6 +97,30 @@ class BaseAgent(ABC):
 
             run_output = await self._run(context)
             duration_ms = (time.perf_counter() - start_time) * 1000.0
+
+            # ── Evidence recording (lazy import, non-blocking) ─────────
+            evidence_list = run_output.get("evidence", [])
+            if evidence_list:
+                try:
+                    from app.services.evidence_service import EvidenceService
+
+                    evidence_service = EvidenceService()
+                    evidence_service.record_evidence_batch(
+                        items=evidence_list,
+                        agent_run_id=agent_run_id,
+                        company_id=context.company_id,
+                        contact_id=context.contact_id,
+                    )
+                except Exception:
+                    self.logger.warning(
+                        "Evidence recording failed, agent execution continues",
+                        extra={
+                            "agent_name": self.name,
+                            "agent_run_id": agent_run_id,
+                            "evidence_count": len(evidence_list),
+                        },
+                        exc_info=True,
+                    )
 
             agent_run_service.mark_succeeded(
                 agent_run_id,

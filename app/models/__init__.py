@@ -2,6 +2,7 @@ from app.models.agent_run import AgentRun
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from app.models.company import Company
 from app.models.contact import Contact
+from app.models.evidence_record import EvidenceRecord
 from app.models.intent_signal import IntentSignal
 from app.models.intelligence_score import IntelligenceScore
 from app.models.job import Job
@@ -14,6 +15,7 @@ __all__ = [
     "Base",
     "Company",
     "Contact",
+    "EvidenceRecord",
     "IntentSignal",
     "IntelligenceScore",
     "Job",

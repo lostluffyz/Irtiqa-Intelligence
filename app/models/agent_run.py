@@ -11,6 +11,7 @@ from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 if TYPE_CHECKING:
     from app.models.company import Company
     from app.models.contact import Contact
+    from app.models.evidence_record import EvidenceRecord
     from app.models.intent_signal import IntentSignal
     from app.models.intelligence_score import IntelligenceScore
     from app.models.job import Job
@@ -61,6 +62,9 @@ class AgentRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="agent_run",
     )
     outreach_messages: Mapped[list[OutreachMessage]] = relationship(
+        back_populates="agent_run",
+    )
+    evidence_records: Mapped[list[EvidenceRecord]] = relationship(
         back_populates="agent_run",
     )
     jobs: Mapped[list[Job]] = relationship(back_populates="agent_run")
