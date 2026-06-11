@@ -552,10 +552,11 @@ Current health:
 - Test Count: `308 passed` (284 SQLite + 24 PostgreSQL)
 - Remaining work: PostgreSQL scaling, deployment.
 - Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Background Job Foundation, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
+- CI status: GitHub Actions workflow configured with ruff (advisory), mypy (advisory), compileall validation, and full test suite (308 tests: 284 SQLite + 24 PostgreSQL) on every push and pull request. Ruff and mypy are advisory to allow incremental debt reduction; test execution is the primary merge gate.
 - Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are implemented; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, Agent Interface Foundation, and Background Job Foundation.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: CI and quality gates.
+- Next milestone: external integrations and orchestration.
 
 ## 6. Repository Conventions
 
@@ -658,7 +659,7 @@ Style and quality tools declared:
 - `mypy`
 - `pytest`
 
-No CI pipeline exists yet.
+CI pipeline configured with GitHub Actions (ruff advisory, mypy advisory, compileall validation, SQLite + PostgreSQL test suite on every push/PR).
 
 ## 8. Architectural Decisions
 
@@ -741,7 +742,7 @@ Priority order from the current state:
 4. Add CI and quality gates.
 5. Implement actual agents.
 
-Completed roadmap item:
+Completed roadmap items:
 
 - Testing foundation.
 - Logging foundation.
@@ -760,21 +761,11 @@ Completed roadmap item:
 - Agent Interface Foundation.
 - Background Job Foundation.
 - PostgreSQL Compatibility Verification.
+- CI and quality gates (GitHub Actions: ruff, mypy, compileall, SQLite tests, PostgreSQL compatibility tests).
 
 ## 10. Next Recommended Task
 
-The next recommended task is:
-
-```text
-CI and Quality Gates
-```
-
-Recommended scope:
-
-- Add automated linting, type-checking, and test execution pipeline.
-- Configure GitHub Actions or equivalent CI provider.
-
-Background Job Foundation is complete. All five core agents are implemented. PostgreSQL compatibility verification is complete.
+CI and quality gates are complete. All five core agents are implemented. PostgreSQL compatibility verification is complete. The next recommended task will be determined based on project priorities.
 
 ## 11. Open Issues
 
@@ -784,7 +775,7 @@ Current known gaps:
 - Workflow foundation, workflow runner, and `score_refresh` exist.
 - Background Job Foundation is implemented with in-process scheduling.
 - No frontend implementation exists yet.
-- No CI configuration exists yet.
+- CI pipeline is configured with GitHub Actions (ruff advisory, mypy advisory, compileall, SQLite tests, PostgreSQL compatibility).
 - No Docker or deployment configuration exists yet.
 - No repository methods enforce domain-level validation.
 - `technology_catalog` is not implemented.
@@ -1333,25 +1324,19 @@ README.md
 
 ### 13. CI and Quality Gates
 
+Status: Completed.
+
 Objective:
 
-- Add automated checks.
+- Add automated linting, type-checking, and test execution pipeline.
 
-Dependencies:
+Implementation:
 
-- Tests.
-- Linting.
-- Typing configuration.
-
-Files likely affected:
-
-```text
-.github/workflows/
-pyproject.toml
-README.md
-docs/project_state.md
-docs/project_handoff.md
-```
+- GitHub Actions workflow at `.github/workflows/ci.yml`
+- Two jobs: `validate` (ruff advisory, mypy advisory, compileall) and `test` (alembic check, SQLite pytest, PostgreSQL 18 service container with migrations and compatibility tests)
+- Ruff and mypy are in advisory mode (`continue-on-error: true`) to allow incremental debt reduction. Test execution is the primary merge gate. A future milestone will enforce all checks after pre-existing code quality issues are resolved.
+- Triggers on push and pull request to `main`
+- 308 total tests: 284 SQLite + 24 PostgreSQL
 
 ### 14. Concrete Agent Implementation
 

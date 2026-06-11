@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install .[dev]
+      - name: ruff check (advisory)
+        run: python -m ruff check app tests
+        continue-on-error: true
+      - name: mypy (advisory)
+        run: python -m mypy app tests
+        continue-on-error: true
+      - run: python -m compileall app tests
+
+  test:
+    needs: validate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: irtiqa_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install .[dev,postgres]
+      - run: python -m alembic check
+      - run: python -m pytest
+      - name: Apply migrations to PostgreSQL
+        run: python -m alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/irtiqa_ci
+      - name: PostgreSQL compatibility tests
+        run: python -m pytest tests/integration/test_postgresql_compatibility.py -v
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/irtiqa_ci
