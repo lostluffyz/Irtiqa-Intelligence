@@ -783,7 +783,7 @@ Known issues or gaps:
 CI is configured with GitHub Actions. Every push and pull request runs:
 
 - **validate** job: ruff linting (advisory), mypy type checking (advisory), compileall syntax verification (blocking).
-- **test** job: alembic schema drift check (blocking), SQLite full test suite (284 tests, blocking), PostgreSQL 18 service container with migration application and 24 compatibility tests (blocking).
+- **test** job: SQLite migration application, alembic schema drift check, SQLite full test suite (284 tests, blocking), PostgreSQL 18 service container with migration application and 24 compatibility tests (blocking).
 
 Ruff and mypy are in advisory mode during the current phase to allow incremental debt reduction. They report violations as warnings in the check output but do not block the pipeline. Test execution is the primary merge gate. A future milestone will remove `continue-on-error` after pre-existing code quality issues are resolved.
 

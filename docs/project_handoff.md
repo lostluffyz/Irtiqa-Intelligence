@@ -1333,7 +1333,7 @@ Objective:
 Implementation:
 
 - GitHub Actions workflow at `.github/workflows/ci.yml`
-- Two jobs: `validate` (ruff advisory, mypy advisory, compileall) and `test` (alembic check, SQLite pytest, PostgreSQL 18 service container with migrations and compatibility tests)
+- Two jobs: `validate` (ruff advisory, mypy advisory, compileall) and `test` (SQLite upgrade, alembic check, SQLite pytest, PostgreSQL 18 service container with migrations and compatibility tests)
 - Ruff and mypy are in advisory mode (`continue-on-error: true`) to allow incremental debt reduction. Test execution is the primary merge gate. A future milestone will enforce all checks after pre-existing code quality issues are resolved.
 - Triggers on push and pull request to `main`
 - 308 total tests: 284 SQLite + 24 PostgreSQL

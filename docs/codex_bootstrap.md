@@ -501,7 +501,7 @@ Do not:
 
 CI and quality gates are complete:
 
-- GitHub Actions workflow with two jobs: validate (ruff advisory, mypy advisory, compileall) and test (alembic check, SQLite pytest, PostgreSQL 18 service container).
+- GitHub Actions workflow with two jobs: validate (ruff advisory, mypy advisory, compileall) and test (SQLite upgrade, alembic check, SQLite pytest, PostgreSQL 18 service container).
 - 308 total tests (284 SQLite + 24 PostgreSQL) on every push and pull request.
 
 ## Reference Documents

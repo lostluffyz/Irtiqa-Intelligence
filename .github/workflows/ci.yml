@@ -46,6 +46,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install .[dev,postgres]
+      - name: Apply migrations (SQLite)
+        run: python -m alembic upgrade head
       - run: python -m alembic check
       - run: python -m pytest
       - name: Apply migrations to PostgreSQL
