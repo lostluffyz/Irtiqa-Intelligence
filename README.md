@@ -1,5 +1,7 @@
 # Irtiqa Intelligence
 
+[![CI](https://github.com/Luffyz/irtiqa-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/Luffyz/irtiqa-intelligence/actions/workflows/ci.yml)
+
 Irtiqa Intelligence is a production-grade lead intelligence platform designed around a FastAPI backend, SQLAlchemy data layer, SQLite-first storage, and a future PostgreSQL migration path.
 
 ## Current Scope
@@ -98,6 +100,15 @@ Run PostgreSQL compatibility tests:
 ```bash
 DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/irtiqa_verify python -m pytest tests/integration/test_postgresql_compatibility.py
 ```
+
+## CI/CD
+
+CI is configured with GitHub Actions. Every push and pull request runs:
+
+1. **validate**: ruff (advisory), mypy (advisory), compileall (blocking).
+2. **test**: SQLite migration application, alembic schema drift check, SQLite full suite (284 tests), PostgreSQL 18 service container with migration verification and 24 compatibility tests (all blocking).
+
+Ruff and mypy are advisory during the current phase. Test execution is the primary merge gate. A future milestone will enforce all checks after pre-existing code quality issues are resolved.
 
 ## Repository Boundaries
 

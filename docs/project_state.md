@@ -123,7 +123,8 @@ Current health:
 - Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, and Background Job Foundation are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints for all models exist; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent exist; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: CI and quality gates.
+- CI status: GitHub Actions workflow configured with ruff, mypy, compileall validation and full test suite (308 tests: 284 SQLite + 24 PostgreSQL) on every push and pull request.
+- Next milestone: external integrations and orchestration.
 
 ## Database Schema
 
@@ -771,17 +772,19 @@ Known issues or gaps:
 - CRUD API routes currently exist for all current persisted entities: companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
 - Workflow foundation, runner, and `score_refresh` exist.
 - Agent Interface Foundation is implemented. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are completed.
-- No CI configuration exists yet.
 - No Docker or deployment configuration exists yet.
 - No repository methods enforce domain-level validation.
 - `technology_catalog` is not implemented; `technologies` currently stores company-specific detections directly.
 - There is no dedicated `workflow_runs` table; workflow state is expected to be inferred from `agent_runs` for now.
 - There is no dedicated evidence table. Current evidence references are stored directly on tables such as `websites`, `intent_signals.source_url`, summaries, and agent run summaries.
 
-## Recommended Next Steps
+## CI/CD Pipeline
 
-Recommended order:
+CI is configured with GitHub Actions. Every push and pull request runs:
 
-1. Add CI and quality gates.
+- **validate** job: ruff linting (advisory), mypy type checking (advisory), compileall syntax verification (blocking).
+- **test** job: SQLite migration application, alembic schema drift check, SQLite full test suite (284 tests, blocking), PostgreSQL 18 service container with migration application and 24 compatibility tests (blocking).
 
-The Background Job Foundation is complete with in-process scheduling, execution, and monitoring for agents and workflows. All five core agents are implemented. PostgreSQL compatibility verification is complete.
+Ruff and mypy are in advisory mode during the current phase to allow incremental debt reduction. They report violations as warnings in the check output but do not block the pipeline. Test execution is the primary merge gate. A future milestone will remove `continue-on-error` after pre-existing code quality issues are resolved.
+
+The full pipeline runs on `ubuntu-latest` with Python 3.11 and completes within 7 minutes.

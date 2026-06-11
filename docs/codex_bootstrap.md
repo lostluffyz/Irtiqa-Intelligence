@@ -27,7 +27,7 @@ Repository rules:
 
 ### Quick Start for the Next Task
 
-PostgreSQL Compatibility Verification is complete. Deep Scraper, Technographic, Intent Signal, Intelligence Scoring, Personalization, and Background Job Foundation are complete. The next recommended task is CI and Quality Gates.
+PostgreSQL Compatibility Verification is complete. Deep Scraper, Technographic, Intent Signal, Intelligence Scoring, Personalization, and Background Job Foundation are complete. CI and quality gates are complete with GitHub Actions.
 
 Implemented agents:
 
@@ -262,11 +262,11 @@ Implemented:
 - Background Job Foundation: in-process job scheduling, execution, and monitoring for agents and workflows with `JobRunner`, `JobScheduler`, retry policy with exponential backoff and jitter, and REST API endpoints.
 - Repositories: isolated database access without commits.
 - Pytest foundation.
+- CI pipeline: GitHub Actions workflow with ruff (advisory), mypy (advisory), compileall validation, and SQLite + PostgreSQL 18 test suite (308 tests on every push/PR). Ruff and mypy are advisory during the current phase to allow incremental debt reduction.
 
 Not implemented:
 
 - Frontend.
-- CI.
 
 Latest known full test result:
 
@@ -497,18 +497,12 @@ Do not:
 - Let docs drift from the implemented schema.
 - Commit `database/irtiqa.db`, `__pycache__/`, or `.pytest_cache/`.
 
-## What Should Be Built Next
+## What Has Been Built
 
-Next recommended task:
+CI and quality gates are complete:
 
-```text
-CI and Quality Gates
-```
-
-Recommended scope:
-
-- Add automated linting, type-checking, and test execution pipeline.
-- Configure GitHub Actions or equivalent CI provider.
+- GitHub Actions workflow with two jobs: validate (ruff advisory, mypy advisory, compileall) and test (SQLite upgrade, alembic check, SQLite pytest, PostgreSQL 18 service container).
+- 308 total tests (284 SQLite + 24 PostgreSQL) on every push and pull request.
 
 ## Reference Documents
 
