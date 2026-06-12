@@ -259,23 +259,19 @@ class IntelligencePipelineWorkflow(Workflow):
         uses ``asyncio.run()``.
 
         When called inside a running event loop (e.g. from a
-        ``JobRunner`` test that uses ``asyncio.run()``), creates a
-        **new** event loop in the same thread to avoid the nested-loop
-        restriction.  This is safe because the coroutine does not share
-        state with the outer loop.
+        ``JobRunner`` test that uses ``asyncio.run()``), creates an
+        isolated ``asyncio.Runner`` to avoid the nested-loop restriction.
+        ``asyncio.Runner`` (Python 3.11+) properly cancels pending tasks
+        and shuts down async generators before closing the loop.
         """
         import asyncio
         try:
             asyncio.get_running_loop()
         except RuntimeError:
             return asyncio.run(coro)
-        # Running inside an event loop — create a fresh loop in the
-        # same thread and run the coroutine to completion.
-        new_loop = asyncio.new_event_loop()
-        try:
-            return new_loop.run_until_complete(coro)
-        finally:
-            new_loop.close()
+        # Running inside an event loop — use an isolated Runner.
+        with asyncio.Runner() as runner:
+            return runner.run(coro)
 
     def _service(self, key: str, service_type: type[ServiceT]) -> ServiceT:
         service = self.services.get(key)
