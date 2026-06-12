@@ -137,3 +137,33 @@ async def test_run_skips_empty_raw_html(agent, context):
     assert output["stats"]["pages_scanned"] == 0
     assert output["stats"]["pages_skipped_no_html"] == 1
     assert output["stats"]["technologies_detected"] == 0
+
+
+@pytest.mark.asyncio
+async def test_technographic_agent_execute_lifecycle():
+    """Verify TechnographicAgent works through BaseAgent.execute() lifecycle."""
+    agent_run_service = MagicMock()
+    agent_run_service.start_workflow_run.return_value = MagicMock(id="f" * 36)
+
+    agent = TechnographicAgent(agent_run_service=agent_run_service)
+    agent.services = {
+        "website_service": MagicMock(),
+        "technology_service": MagicMock(),
+        "agent_run_service": agent_run_service,
+    }
+    agent.services["website_service"].list_by_company.return_value = []
+    agent.services["technology_service"].get_company_technology.return_value = None
+
+    context = AgentContext(
+        agent_name="technographic",
+        company_id="12345678-1234-1234-1234-123456789012",
+        options={},
+    )
+
+    from app.agents.result import AGENT_STATUS_SUCCEEDED
+    result = await agent.execute(context)
+
+    assert result.status == AGENT_STATUS_SUCCEEDED
+    assert result.agent_run_id is not None
+    assert "technologies" in result.output_ids
+    assert result.summary is not None

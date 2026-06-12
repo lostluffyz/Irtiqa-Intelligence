@@ -11,10 +11,18 @@ from app.api.errors import register_exception_handlers
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, get_logger
+from app.agents import (
+    DeepScraperAgent,
+    IntelligenceScoringAgent,
+    IntentSignalAgent,
+    PersonalizationAgent,
+    TechnographicAgent,
+)
+from app.agents.registry import AgentRegistry
 from app.jobs import JobRunner, JobScheduler
 from app.services import JobService
-from app.agents.registry import AgentRegistry
 from app.workflows.registry import WorkflowRegistry
+from app.workflows.score_refresh import ScoreRefreshWorkflow
 
 
 APP_NAME = "Irtiqa Intelligence"
@@ -63,8 +71,16 @@ def _build_lifespan(
         )
 
         job_service = JobService()
+
         agent_registry = AgentRegistry()
+        agent_registry.register(DeepScraperAgent)
+        agent_registry.register(TechnographicAgent)
+        agent_registry.register(IntentSignalAgent)
+        agent_registry.register(IntelligenceScoringAgent)
+        agent_registry.register(PersonalizationAgent)
+
         workflow_registry = WorkflowRegistry()
+        workflow_registry.register(ScoreRefreshWorkflow)
 
         job_runner = JobRunner(
             job_service=job_service,

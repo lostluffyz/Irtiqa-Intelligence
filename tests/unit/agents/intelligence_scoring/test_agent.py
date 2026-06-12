@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from app.agents.context import AgentContext
 from app.agents.intelligence_scoring.agent import IntelligenceScoringAgent
+from app.agents.result import AGENT_STATUS_SUCCEEDED
 from app.models.company import Company
 from app.models.contact import Contact
 from app.models.intent_signal import IntentSignal
@@ -110,7 +111,7 @@ async def test_intelligence_scoring_agent_company_only(
     assert create_schema.contact_id is None
     assert create_schema.total_score > 0
 
-    assert output["intelligence_scores"] == [expected_score_id]
+    assert output["output_ids"]["intelligence_scores"] == [expected_score_id]
 
 
 @pytest.mark.asyncio
@@ -185,7 +186,7 @@ async def test_intelligence_scoring_agent_with_contact(
     # Ensure it parsed intent signals
     assert "2 intent signals" in create_schema.rationale
 
-    assert output["intelligence_scores"] == [expected_score_id]
+    assert output["output_ids"]["intelligence_scores"] == [expected_score_id]
 
 
 @pytest.mark.asyncio
@@ -219,3 +220,38 @@ async def test_intelligence_scoring_agent_contact_not_found(
 
     with pytest.raises(ValueError, match=f"Contact {contact_id} not found."):
         await agent._run(context)
+
+
+@pytest.mark.asyncio
+async def test_intelligence_scoring_agent_execute_lifecycle(
+    services: dict,
+    mock_company_service: MagicMock,
+    mock_technology_service: MagicMock,
+    mock_intent_signal_service: MagicMock,
+    mock_intelligence_score_service: MagicMock,
+) -> None:
+    """Verify IntelligenceScoringAgent works through BaseAgent.execute() lifecycle."""
+    agent_run_service = MagicMock()
+    agent_run_service.start_workflow_run.return_value = MagicMock(id="f" * 36)
+    services["agent_run_service"] = agent_run_service
+    agent = IntelligenceScoringAgent(**services)
+
+    company_id = str(uuid.uuid4())
+    context = AgentContext(agent_name="intelligence_scoring_agent", company_id=company_id)
+
+    company = Company(id=company_id, name="Test Corp", domain="test.com", industry="Tech")
+    mock_company_service.get.return_value = company
+    mock_technology_service.list_by_company.return_value = []
+    mock_intent_signal_service.list_by_company.return_value = []
+
+    expected_score_id = str(uuid.uuid4())
+    score_model = IntelligenceScore(id=expected_score_id, company_id=company_id, total_score=85.0)
+    mock_intelligence_score_service.create.return_value = score_model
+
+    result = await agent.execute(context)
+
+    assert result.status == AGENT_STATUS_SUCCEEDED
+    assert result.agent_run_id is not None
+    assert "intelligence_scores" in result.output_ids
+    assert result.output_ids["intelligence_scores"] == [expected_score_id]
+    assert result.summary is not None

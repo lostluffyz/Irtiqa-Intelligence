@@ -159,3 +159,27 @@ async def test_run_missing_intent_and_tech_and_scores(services):
     assert len(output["output_ids"]["outreach_messages"]) == 3
     assert output["stats"]["primary_angle"] == "fit_driven"
     assert output["stats"]["secondary_angle"] == "fit_driven"
+
+
+@pytest.mark.asyncio
+async def test_personalization_agent_execute_lifecycle(services):
+    """Verify PersonalizationAgent works through BaseAgent.execute() lifecycle."""
+    agent_run_service = MagicMock()
+    agent_run_service.start_workflow_run.return_value = MagicMock(id="f" * 36)
+    services["agent_run_service"] = agent_run_service
+
+    agent = PersonalizationAgent(**services)
+    context = AgentContext(
+        agent_name="personalization_agent",
+        company_id="11111111-1111-1111-1111-111111111111",
+        contact_id="22222222-2222-2222-2222-222222222222",
+    )
+
+    from app.agents.result import AGENT_STATUS_SUCCEEDED
+    result = await agent.execute(context)
+
+    assert result.status == AGENT_STATUS_SUCCEEDED
+    assert result.agent_run_id is not None
+    assert "outreach_messages" in result.output_ids
+    assert len(result.output_ids["outreach_messages"]) == 3
+    assert result.summary is not None

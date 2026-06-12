@@ -158,12 +158,15 @@ class JobRunner:
 
         result = runner.run(context)
 
-        if result.agent_run_id:
+        # Use the first agent_run_id from the workflow result.
+        # WorkflowResult stores multiple agent_run_ids; the job FK stores one.
+        primary_agent_run_id = result.agent_run_ids[0] if result.agent_run_ids else None
+        if primary_agent_run_id:
             self.job_service.update(
                 job.id,
                 status="succeeded",
                 completed_at=datetime.now(timezone.utc),
-                agent_run_id=result.agent_run_id,
+                agent_run_id=primary_agent_run_id,
             )
         else:
             self.job_service.update(

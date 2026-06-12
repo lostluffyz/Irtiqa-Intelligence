@@ -151,10 +151,65 @@ async def test_runner_handles_agent_failure_no_retries_left(
         agent_registry=mock_agent_registry,
         poll_interval=5.0,
     )
-    
+
     await runner._run_job(sample_job)
-    
+
     # Should update job to failed
     mock_job_service.update.assert_called()
     call_args = mock_job_service.update.call_args
     assert call_args[1]["status"] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_runner_dispatches_workflow_job(
+    mock_job_service: MagicMock,
+    mock_workflow_registry: MagicMock,
+) -> None:
+    """Verify workflow job dispatch uses agent_run_ids[0] for the job FK."""
+    wf_job = Job()
+    wf_job.id = "22222222-2222-2222-2222-222222222222"
+    wf_job.job_type = "workflow"
+    wf_job.target_name = "test_workflow"
+    wf_job.payload = '{"company_id": "11111111-1111-1111-1111-111111111111"}'
+    wf_job.status = "pending"
+    wf_job.scheduled_at = datetime.now(timezone.utc)
+    wf_job.started_at = None
+    wf_job.completed_at = None
+    wf_job.retry_count = 0
+    wf_job.max_retries = 3
+    wf_job.last_error = None
+    wf_job.agent_run_id = None
+
+    mock_job_service.get_next_jobs.return_value = [wf_job]
+    mock_job_service.claim_job.return_value = wf_job
+
+    # Use a real WorkflowResult to avoid MagicMock attribute surprises
+    from app.workflows.result import WorkflowResult
+    from app.workflows.states import WorkflowStatus
+
+    real_result = WorkflowResult(
+        workflow_name="test_workflow",
+        status=WorkflowStatus.SUCCEEDED,
+        agent_run_ids=["run-1", "run-2", "run-3"],
+        output_ids={"scores": ["1"]},
+    )
+
+    mock_workflow_cls = MagicMock()
+    mock_workflow_cls.return_value.execute.return_value = real_result
+    mock_workflow_registry.get.return_value = mock_workflow_cls
+
+    runner = JobRunner(
+        job_service=mock_job_service,
+        workflow_registry=mock_workflow_registry,
+        poll_interval=5.0,
+    )
+
+    await runner._run_job(wf_job)
+
+    mock_job_service.claim_job.assert_called_once_with(wf_job.id)
+    mock_workflow_registry.get.assert_called_once_with("test_workflow")
+    mock_job_service.update.assert_called()
+    # Verify the job was updated with the FIRST agent_run_id
+    call_kwargs = mock_job_service.update.call_args[1]
+    assert call_kwargs["status"] == "succeeded"
+    assert call_kwargs["agent_run_id"] == "run-1"

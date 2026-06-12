@@ -103,4 +103,15 @@ class IntelligenceScoringAgent(BaseAgent):
             "IntelligenceScoringAgent completed successfully",
             extra={"score_id": score.id, "total_score": score.total_score},
         )
-        return {"intelligence_scores": [score.id]}
+        return AgentRunOutput(
+            output_ids={"intelligence_scores": [score.id]},
+            summary=f"Created intelligence score {score.id} with total_score={result.total_score}",
+            stats={
+                "total_score": result.total_score,
+                "confidence": result.confidence,
+                "fit_score": result.fit_score,
+                "intent_score": result.intent_score,
+                "technographic_score": result.technographic_score,
+                "engagement_score": result.engagement_score,
+            },
+        )
