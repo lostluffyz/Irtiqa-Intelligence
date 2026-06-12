@@ -41,9 +41,22 @@ class LoggingSettings:
 
 
 @dataclass(frozen=True)
+class AuthSettings:
+    jwt_private_key: str | None = None
+    jwt_algorithm: str = "RS256"
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 7
+    password_reset_expire_minutes: int = 15
+    max_login_attempts: int = 5
+    login_lockout_minutes: int = 15
+    dev_mode: bool = False
+
+
+@dataclass(frozen=True)
 class Settings:
     database: DatabaseSettings
     logging: LoggingSettings
+    auth: AuthSettings
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -92,5 +105,14 @@ def get_settings() -> Settings:
                 ),
             ),
             date_format=os.getenv("LOG_DATE_FORMAT", "%Y-%m-%dT%H:%M:%S%z"),
+        ),
+        auth=AuthSettings(
+            jwt_private_key=os.getenv("JWT_PRIVATE_KEY"),
+            access_token_expire_minutes=_env_int("ACCESS_TOKEN_EXPIRE_MINUTES", 15),
+            refresh_token_expire_days=_env_int("REFRESH_TOKEN_EXPIRE_DAYS", 7),
+            password_reset_expire_minutes=_env_int("PASSWORD_RESET_EXPIRE_MINUTES", 15),
+            max_login_attempts=_env_int("MAX_LOGIN_ATTEMPTS", 5),
+            login_lockout_minutes=_env_int("LOGIN_LOCKOUT_MINUTES", 15),
+            dev_mode=_env_bool("DEV_MODE", False),
         ),
     )

@@ -6,12 +6,17 @@ from app.models import Base
 from app.models.agent_run import AgentRun
 from app.models.company import Company
 from app.models.contact import Contact
+from app.models.email_verification_token import EmailVerificationToken
 from app.models.evidence_record import EvidenceRecord
+from app.models.failed_login_attempt import FailedLoginAttempt
 from app.models.intent_signal import IntentSignal
 from app.models.intelligence_score import IntelligenceScore
 from app.models.job import Job
 from app.models.outreach_message import OutreachMessage
+from app.models.password_reset_token import PasswordResetToken
+from app.models.refresh_token import RefreshToken
 from app.models.technology import Technology
+from app.models.user import User
 from app.models.website import Website
 
 
@@ -20,12 +25,17 @@ def test_model_metadata_contains_current_schema_tables() -> None:
         "agent_runs",
         "companies",
         "contacts",
+        "email_verification_tokens",
         "evidence_records",
+        "failed_login_attempts",
         "intelligence_scores",
         "intent_signals",
         "jobs",
         "outreach_messages",
+        "password_reset_tokens",
+        "refresh_tokens",
         "technologies",
+        "users",
         "websites",
     }
 
@@ -40,6 +50,7 @@ def test_models_have_primary_key_and_timestamps() -> None:
         IntelligenceScore,
         OutreachMessage,
         Technology,
+        User,
         Website,
     ):
         columns = model.__table__.columns

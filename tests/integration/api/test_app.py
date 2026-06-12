@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_app_settings
-from app.core.config import DatabaseSettings, LoggingSettings, Settings
+from app.core.config import AuthSettings, DatabaseSettings, LoggingSettings, Settings
 from app.main import create_app
 
 
@@ -70,4 +70,5 @@ def _test_settings(database_url: str = "sqlite:///:memory:") -> Settings:
             format="%(levelname)s:%(name)s:%(message)s",
             date_format="%Y-%m-%dT%H:%M:%S%z",
         ),
+        auth=AuthSettings(),
     )

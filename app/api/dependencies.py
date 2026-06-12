@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
+from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.database.session import SessionLocal
 from app.services import (
     AgentRunService,
+    AuthService,
     CompanyService,
     ContactService,
     EvidenceService,
@@ -70,3 +72,35 @@ def get_job_service() -> JobService:
 
 def get_evidence_service() -> EvidenceService:
     return EvidenceService()
+
+
+def get_auth_service() -> AuthService:
+    return AuthService()
+
+
+def get_current_user(
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> dict:
+    if authorization is None or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    token = authorization.removeprefix("Bearer ")
+    try:
+        user = auth_service.authenticate_with_token(token)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return {
+        "id": user.id,
+        "email": user.email,
+        "display_name": user.display_name,
+        "is_active": user.is_active,
+        "created_at": user.created_at,
+    }

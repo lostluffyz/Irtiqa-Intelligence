@@ -1,4 +1,5 @@
 from app.services.agent_run_service import AgentRunService
+from app.services.auth_service import AuthService
 from app.services.base import BaseService
 from app.services.company_service import CompanyService
 from app.services.evidence_service import EvidenceService
@@ -12,6 +13,7 @@ from app.services.website_service import WebsiteService
 
 __all__ = [
     "AgentRunService",
+    "AuthService",
     "BaseService",
     "CompanyService",
     "ContactService",
