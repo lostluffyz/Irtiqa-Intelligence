@@ -5,8 +5,12 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ENV_FILE = PROJECT_ROOT / ".env"
+load_dotenv(ENV_FILE, override=True)
 DEFAULT_SQLITE_PATH = PROJECT_ROOT / "database" / "irtiqa.db"
 DEFAULT_LOG_PATH = PROJECT_ROOT / "logs" / "irtiqa.log"
 
