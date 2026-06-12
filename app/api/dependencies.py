@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
@@ -78,19 +79,20 @@ def get_auth_service() -> AuthService:
     return AuthService()
 
 
+# Reusable bearer security scheme for OpenAPI / Swagger UI.
+# HTTPBearer automatically extracts the token from the
+# ``Authorization: Bearer <token>`` header and integrates with the
+# "Authorize" button in Swagger UI so that generated requests include
+# the header.
+bearer_scheme = HTTPBearer(auto_error=True)
+
+
 def get_current_user(
-    authorization: str | None = Header(default=None),
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> dict:
-    if authorization is None or not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid Authorization header.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    token = authorization.removeprefix("Bearer ")
     try:
-        user = auth_service.authenticate_with_token(token)
+        user = auth_service.authenticate_with_token(credentials.credentials)
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
