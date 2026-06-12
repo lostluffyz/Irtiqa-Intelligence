@@ -262,7 +262,7 @@ Implemented:
 - Background Job Foundation: in-process job scheduling, execution, and monitoring for agents and workflows with `JobRunner`, `JobScheduler`, retry policy with exponential backoff and jitter, and REST API endpoints.
 - Repositories: isolated database access without commits.
 - Pytest foundation.
-- CI pipeline: GitHub Actions workflow with ruff (advisory), mypy (advisory), compileall validation, and SQLite + PostgreSQL 18 test suite (308 tests on every push/PR). Ruff and mypy are advisory during the current phase to allow incremental debt reduction.
+- CI pipeline: GitHub Actions workflow with ruff (advisory), mypy (advisory), compileall validation, and SQLite + PostgreSQL 18 test suite (330 tests on every push/PR). Ruff and mypy are advisory during the current phase to allow incremental debt reduction.
 
 Not implemented:
 
@@ -272,7 +272,7 @@ Latest known full test result:
 
 ```text
 python -m pytest
-308 passed (284 SQLite + 24 PostgreSQL)
+330 passed (306 SQLite + 24 PostgreSQL)
 ```
 
 PostgreSQL verification tests:
@@ -295,7 +295,7 @@ No new upgrade operations detected.
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `308 passed` (284 SQLite + 24 PostgreSQL).
+- Current test count: `330 passed` (306 SQLite + 24 PostgreSQL).
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
 - Architecture status: FastAPI skeleton, CRUD API Endpoints, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, logging, errors, and backup documentation are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints exist; workflow foundation exists;
@@ -502,7 +502,8 @@ Do not:
 CI and quality gates are complete:
 
 - GitHub Actions workflow with two jobs: validate (ruff advisory, mypy advisory, compileall) and test (SQLite upgrade, alembic check, SQLite pytest, PostgreSQL 18 service container).
-- 308 total tests (284 SQLite + 24 PostgreSQL) on every push and pull request.
+- 330 total tests (306 SQLite + 24 PostgreSQL) on every push and pull request.
+- Intelligence Pipeline Workflow: end-to-end orchestration chaining all 5 agents (Deep Scraper → Technographic → Intent Signal → Intelligence Scoring → Personalization) triggered via `POST /intelligence/pipeline`.
 
 ## Reference Documents
 

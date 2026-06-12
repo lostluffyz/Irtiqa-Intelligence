@@ -466,7 +466,7 @@ python -m pytest
 Result:
 
 ```text
-316 passed (292 SQLite + 24 PostgreSQL)
+330 passed (306 SQLite + 24 PostgreSQL)
 ```
 
 Current test coverage verifies:
@@ -555,14 +555,14 @@ Current health:
 
 - Foundation status: healthy.
 - Stage: Backend Intelligence Agents
-- Test Count: `316 passed` (292 SQLite + 24 PostgreSQL)
+- Test Count: `330 passed` (306 SQLite + 24 PostgreSQL)
 - Remaining work: PostgreSQL scaling, deployment.
-- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Background Job Foundation, Evidence Records System, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
-- CI status: GitHub Actions workflow configured with ruff (advisory), mypy (advisory), compileall validation, and full test suite (316 tests: 292 SQLite + 24 PostgreSQL) on every push and pull request. Ruff and mypy are advisory to allow incremental debt reduction; test execution is the primary merge gate.
+- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Background Job Foundation, Evidence Records System, Intelligence Pipeline Workflow, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
+- CI status: GitHub Actions workflow configured with ruff (advisory), mypy (advisory), compileall validation, and full test suite (330 tests: 306 SQLite + 24 PostgreSQL) on every push and pull request. Ruff and mypy are advisory to allow incremental debt reduction; test execution is the primary merge gate.
 - Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; evidence API endpoints (by target, source, company, agent run, summary, detail) exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are implemented; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, Agent Interface Foundation, and Background Job Foundation.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- Next milestone: external integrations and orchestration.
+- Next milestone: external integrations and deployment readiness.
 
 ## 6. Repository Conventions
 
@@ -771,10 +771,11 @@ Completed roadmap items:
 - Background Job Foundation.
 - PostgreSQL Compatibility Verification.
 - CI and quality gates (GitHub Actions: ruff, mypy, compileall, SQLite tests, PostgreSQL compatibility tests).
+- Intelligence Pipeline Workflow (end-to-end orchestration chaining all 5 agents).
 
 ## 10. Next Recommended Task
 
-CI and quality gates are complete. All five core agents are implemented. PostgreSQL compatibility verification is complete. The next recommended task will be determined based on project priorities.
+CI and quality gates are complete. All five core agents are implemented. PostgreSQL compatibility verification is complete. The Intelligence Pipeline is implemented, chaining all 5 agents into a single orchestrated workflow. The next recommended task will be determined based on project priorities.
 
 ## 11. Open Issues
 
@@ -1344,7 +1345,7 @@ Implementation:
 - Two jobs: `validate` (ruff advisory, mypy advisory, compileall) and `test` (SQLite upgrade, alembic check, SQLite pytest, PostgreSQL 18 service container with migrations and compatibility tests)
 - Ruff and mypy are in advisory mode (`continue-on-error: true`) to allow incremental debt reduction. Test execution is the primary merge gate. A future milestone will enforce all checks after pre-existing code quality issues are resolved.
 - Triggers on push and pull request to `main`
-- 316 total tests: 292 SQLite + 24 PostgreSQL
+- 330 total tests: 306 SQLite + 24 PostgreSQL
 
 ### 14. Concrete Agent Implementation
 

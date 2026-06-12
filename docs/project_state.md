@@ -22,6 +22,7 @@ Current architectural direction:
 *   **Intelligence Scoring Agent**: Aggregation of fit, intent, technographic, and engagement scores utilizing the DeterministicScoreRefreshPolicy.
 *   **Personalization Agent**: Generation of tailored, multi-variant outreach copy based on all accumulated intelligence.
 *   **Background Job Foundation**: In-process job scheduling, execution, and monitoring for agents and workflows implemented and tested.
+*   **Intelligence Pipeline Workflow**: End-to-end orchestration chaining all 5 agents into a single pipeline triggered via `POST /intelligence/pipeline`.
 
 ### Next Steps
 
@@ -108,8 +109,9 @@ Current status:
 - Intelligence Scoring Agent is complete.
 - Personalization Agent is complete.
 - Task 12, Background Job Foundation, is complete.
-- Current full test suite result is `316 passed` (292 SQLite + 24 PostgreSQL).
+- Current full test suite result is `330 passed` (306 SQLite + 24 PostgreSQL).
 - Evidence records system implemented with dedicated `evidence_records` table, service, API, and agent integration.
+- Intelligence Pipeline workflow implemented: chains all 5 agents (Deep Scraper → Technographic → Intent Signal → Intelligence Scoring → Personalization) into a single orchestrated run triggered via API.
 - Alembic schema drift check reports no new upgrade operations after upgrading to head.
 - Generated artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` should remain uncommitted.
 - The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are complete. Background Job Foundation is complete. Scraping orchestration, frontend, and external integrations have not been implemented.
@@ -119,9 +121,9 @@ Current status:
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `316 passed` (292 SQLite + 24 PostgreSQL).
+- Current test count: `330 passed` (306 SQLite + 24 PostgreSQL).
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, and Evidence Records System are implemented.
+- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, Evidence Records System, and Intelligence Pipeline Workflow are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints for all models exist; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent exist; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
 - CI status: GitHub Actions workflow configured with ruff, mypy, compileall validation and full test suite (308 tests: 284 SQLite + 24 PostgreSQL) on every push and pull request.
@@ -621,7 +623,7 @@ python -m pytest
 Result:
 
 ```text
-316 passed (292 SQLite + 24 PostgreSQL)
+330 passed (306 SQLite + 24 PostgreSQL)
 ```
 
 PostgreSQL verification tests:
@@ -785,7 +787,7 @@ Known issues or gaps:
 CI is configured with GitHub Actions. Every push and pull request runs:
 
 - **validate** job: ruff linting (advisory), mypy type checking (advisory), compileall syntax verification (blocking).
-- **test** job: SQLite migration application, alembic schema drift check, SQLite full test suite (292 tests, blocking), PostgreSQL 18 service container with migration application and 24 compatibility tests (blocking).
+- **test** job: SQLite migration application, alembic schema drift check, SQLite full test suite (306 tests, blocking), PostgreSQL 18 service container with migration application and 24 compatibility tests (blocking).
 
 Ruff and mypy are in advisory mode during the current phase to allow incremental debt reduction. They report violations as warnings in the check output but do not block the pipeline. Test execution is the primary merge gate. A future milestone will remove `continue-on-error` after pre-existing code quality issues are resolved.
 

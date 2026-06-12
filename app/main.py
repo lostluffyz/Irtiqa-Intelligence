@@ -22,6 +22,7 @@ from app.agents.registry import AgentRegistry
 from app.jobs import JobRunner, JobScheduler
 from app.services import JobService
 from app.workflows.registry import WorkflowRegistry
+from app.workflows.intelligence_pipeline import IntelligencePipelineWorkflow
 from app.workflows.score_refresh import ScoreRefreshWorkflow
 
 
@@ -81,6 +82,7 @@ def _build_lifespan(
 
         workflow_registry = WorkflowRegistry()
         workflow_registry.register(ScoreRefreshWorkflow)
+        workflow_registry.register(IntelligencePipelineWorkflow)
 
         job_runner = JobRunner(
             job_service=job_service,

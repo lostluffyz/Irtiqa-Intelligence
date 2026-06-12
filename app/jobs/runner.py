@@ -158,6 +158,26 @@ class JobRunner:
 
         result = runner.run(context)
 
+        from app.workflows.states import WorkflowStatus as WfStatus
+
+        if result.status == WfStatus.FAILED:
+            error_message = str(result.error) if result.error else "Workflow returned failed status"
+            self.job_service.update(
+                job.id,
+                status="failed",
+                completed_at=datetime.now(timezone.utc),
+                last_error=error_message,
+            )
+            self.logger.error(
+                "Workflow job failed",
+                extra={
+                    "job_id": job.id,
+                    "workflow_name": job.target_name,
+                    "error": error_message,
+                },
+            )
+            return
+
         # Use the first agent_run_id from the workflow result.
         # WorkflowResult stores multiple agent_run_ids; the job FK stores one.
         primary_agent_run_id = result.agent_run_ids[0] if result.agent_run_ids else None

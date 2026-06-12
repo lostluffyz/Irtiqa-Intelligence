@@ -7,6 +7,7 @@ from app.api.v1.endpoints.companies import router as companies_router
 from app.api.v1.endpoints.contacts import router as contacts_router
 from app.api.v1.endpoints.evidence import router as evidence_router
 from app.api.v1.endpoints.health import router as health_router
+from app.api.v1.endpoints.intelligence import router as intelligence_router
 from app.api.v1.endpoints.intent_signals import router as intent_signals_router
 from app.api.v1.endpoints.intelligence_scores import router as intelligence_scores_router
 from app.api.v1.endpoints.jobs import router as jobs_router
@@ -20,6 +21,7 @@ router.include_router(health_router)
 router.include_router(companies_router)
 router.include_router(contacts_router)
 router.include_router(evidence_router)
+router.include_router(intelligence_router)
 router.include_router(websites_router)
 router.include_router(technologies_router)
 router.include_router(intent_signals_router)
