@@ -7,7 +7,9 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.errors import EntityNotFoundError, ValidationError
+from app.models.membership import Membership
 from app.models.organization import Organization, generate_unique_slug
+from app.repositories.membership_repository import MembershipRepository
 from app.repositories.organization_repository import OrganizationRepository
 from app.services.base import BaseService
 
@@ -35,6 +37,45 @@ class OrganizationService(BaseService[Organization, OrganizationRepository]):
             return org
 
         return self._run_in_transaction("create", operation)
+
+    def create_with_owner(self, name: str, user_id: str) -> tuple[Organization, Membership]:
+        """Create an organization and an owner membership atomically.
+
+        The caller becomes the owner of the new organization.
+        If either creation fails, the entire transaction is rolled back.
+        """
+        self._validate_identifier(name, field_name="name")
+        self._validate_identifier(user_id, field_name="user_id")
+        now = datetime.now(timezone.utc)
+
+        def operation(session: Session) -> tuple[Organization, Membership]:
+            org_repo = OrganizationRepository(session)
+            mem_repo = MembershipRepository(session)
+
+            slug = generate_unique_slug(name, session)
+            org = Organization(
+                name=name,
+                slug=slug,
+                status="active",
+                created_at=now,
+                updated_at=now,
+            )
+            org_repo.add(org)
+            session.flush()
+
+            membership = Membership(
+                user_id=user_id,
+                organization_id=org.id,
+                role="owner",
+                created_at=now,
+                updated_at=now,
+            )
+            mem_repo.add(membership)
+            session.flush()
+
+            return org, membership
+
+        return self._run_in_transaction("create_with_owner", operation)
 
     def get(self, organization_id: str) -> Organization | None:
         self._validate_identifier(organization_id, field_name="organization_id")

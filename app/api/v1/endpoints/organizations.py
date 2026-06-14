@@ -36,7 +36,7 @@ def create_organization(
     current_user: dict = Depends(get_current_user),
     org_service: OrganizationService = Depends(get_organization_service),
 ) -> OrganizationRead:
-    org = org_service.create(name=payload.name)
+    org, _ = org_service.create_with_owner(name=payload.name, user_id=current_user["id"])
     return OrganizationRead.model_validate(org)
 
 
