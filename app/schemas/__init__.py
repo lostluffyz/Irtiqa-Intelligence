@@ -21,6 +21,14 @@ from app.schemas.job import (
     JobScheduleAgentRequest,
     JobScheduleWorkflowRequest,
 )
+from app.schemas.membership import (
+    MembershipCreate,
+    MembershipList,
+    MembershipRead,
+    MembershipUpdateRole,
+    TransferOwnershipRequest,
+)
+from app.schemas.organization import OrganizationCreate, OrganizationList, OrganizationRead, OrganizationUpdate
 from app.schemas.outreach_message import (
     OutreachMessageCreate,
     OutreachMessageList,
@@ -60,6 +68,14 @@ __all__ = [
     "JobRead",
     "JobScheduleAgentRequest",
     "JobScheduleWorkflowRequest",
+    "MembershipCreate",
+    "MembershipList",
+    "MembershipRead",
+    "MembershipUpdateRole",
+    "OrganizationCreate",
+    "OrganizationList",
+    "OrganizationRead",
+    "OrganizationUpdate",
     "OutreachMessageCreate",
     "OutreachMessageList",
     "OutreachMessageRead",
@@ -68,6 +84,7 @@ __all__ = [
     "TechnologyList",
     "TechnologyRead",
     "TechnologyUpdate",
+    "TransferOwnershipRequest",
     "WebsiteCreate",
     "WebsiteList",
     "WebsiteRead",
