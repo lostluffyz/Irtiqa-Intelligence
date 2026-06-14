@@ -7,6 +7,8 @@ from app.services.contact_service import ContactService
 from app.services.intent_signal_service import IntentSignalService
 from app.services.intelligence_score_service import IntelligenceScoreService
 from app.services.job_service import JobService
+from app.services.membership_service import MembershipService
+from app.services.organization_service import OrganizationService
 from app.services.outreach_message_service import OutreachMessageService
 from app.services.technology_service import TechnologyService
 from app.services.website_service import WebsiteService
@@ -21,6 +23,8 @@ __all__ = [
     "IntentSignalService",
     "IntelligenceScoreService",
     "JobService",
+    "MembershipService",
+    "OrganizationService",
     "OutreachMessageService",
     "TechnologyService",
     "WebsiteService",
