@@ -17,6 +17,8 @@ from app.services import (
     IntelligenceScoreService,
     IntentSignalService,
     JobService,
+    MembershipService,
+    OrganizationService,
     OutreachMessageService,
     TechnologyService,
     WebsiteService,
@@ -73,6 +75,14 @@ def get_job_service() -> JobService:
 
 def get_evidence_service() -> EvidenceService:
     return EvidenceService()
+
+
+def get_organization_service() -> OrganizationService:
+    return OrganizationService()
+
+
+def get_membership_service() -> MembershipService:
+    return MembershipService()
 
 
 def get_auth_service() -> AuthService:

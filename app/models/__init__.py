@@ -8,6 +8,8 @@ from app.models.failed_login_attempt import FailedLoginAttempt
 from app.models.intent_signal import IntentSignal
 from app.models.intelligence_score import IntelligenceScore
 from app.models.job import Job
+from app.models.membership import Membership
+from app.models.organization import Organization
 from app.models.outreach_message import OutreachMessage
 from app.models.password_reset_token import PasswordResetToken
 from app.models.refresh_token import RefreshToken
@@ -26,6 +28,8 @@ __all__ = [
     "IntentSignal",
     "IntelligenceScore",
     "Job",
+    "Membership",
+    "Organization",
     "OutreachMessage",
     "PasswordResetToken",
     "RefreshToken",
