@@ -25,9 +25,14 @@ from app.core.security import (
 )
 from app.models.email_verification_token import EmailVerificationToken
 from app.models.failed_login_attempt import FailedLoginAttempt
+from app.models.membership import Membership
+from app.models.organization import Organization, generate_unique_slug
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+from app.repositories.membership_repository import MembershipRepository
+from app.repositories.organization_repository import OrganizationRepository
 from app.repositories.user_repository import UserRepository
+from app.schemas.auth import OrganizationSummary
 from app.services.base import BaseService
 from app.core.logging import get_logger
 
@@ -87,6 +92,39 @@ class AuthService(BaseService[User, UserRepository]):
             )
             session.flush()
 
+            # Create default organization
+            org_name = f"{display_name}'s Organization"
+            org_repo = OrganizationRepository(session)
+            slug = generate_unique_slug(org_name, session)
+            org = Organization(
+                name=org_name,
+                slug=slug,
+                status="active",
+                created_at=now,
+                updated_at=now,
+            )
+            org_repo.add(org)
+            session.flush()
+
+            # Create owner membership
+            mem_repo = MembershipRepository(session)
+            membership = Membership(
+                user_id=user.id,
+                organization_id=org.id,
+                role="owner",
+                created_at=now,
+                updated_at=now,
+            )
+            mem_repo.add(membership)
+            session.flush()
+
+            # Store org summary for the response
+            user._organization_summary = OrganizationSummary(
+                id=org.id,
+                name=org.name,
+                slug=org.slug,
+                role="owner",
+            )
             # Store raw token on the user object for the response
             user._verification_token_raw = raw_token  # type: ignore[attr-defined]
             return user
@@ -130,7 +168,12 @@ class AuthService(BaseService[User, UserRepository]):
 
     # ── Login ─────────────────────────────────────────────────────────────
 
-    def login(self, email: str, password: str, ip_address: str) -> tuple[User, str, str]:
+    def login(
+        self,
+        email: str,
+        password: str,
+        ip_address: str,
+    ) -> tuple[User, str, str, OrganizationSummary | None]:
         normalized_email = email.strip().lower()
         settings = get_settings()
 
@@ -161,14 +204,36 @@ class AuthService(BaseService[User, UserRepository]):
         # Clear failed attempts on successful login
         self._clear_failed_attempts(normalized_email)
 
+        # Look up default org and role
+        def lookup_org(session: Session) -> tuple[str | None, str | None, OrganizationSummary | None]:
+            mem_repo = MembershipRepository(session)
+            memberships = mem_repo.list_user_memberships(user.id, limit=1)
+            if not memberships:
+                return None, None, None
+            m = memberships[0]
+            org = session.get(Organization, m.organization_id)
+            if org is None:
+                return None, None, None
+            summary = OrganizationSummary(
+                id=org.id,
+                name=org.name,
+                slug=org.slug,
+                role=m.role,
+            )
+            return m.organization_id, m.role, summary
+
+        org_id, org_role, org_summary = self._run_in_transaction("lookup_org", lookup_org)
+
         # Generate tokens
         access_token = create_access_token(
             user_id=user.id,
+            organization_id=org_id,
+            role=org_role,
         )
         raw_refresh, hashed_refresh = generate_refresh_token()
         self._store_refresh_token(user.id, hashed_refresh)
 
-        return user, access_token, raw_refresh
+        return user, access_token, raw_refresh, org_summary
 
     # ── Logout ────────────────────────────────────────────────────────────
 

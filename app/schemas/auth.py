@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import Field
 
@@ -15,6 +16,13 @@ class UserResponse(IrtiqaSchema):
     created_at: datetime
 
 
+class OrganizationSummary(IrtiqaSchema):
+    id: str
+    name: str
+    slug: str
+    role: str
+
+
 class RegisterRequest(IrtiqaSchema):
     email: str = Field(min_length=5, max_length=320)
     password: str = Field(min_length=8, max_length=128)
@@ -26,6 +34,7 @@ class RegisterResponse(IrtiqaSchema):
     email: str
     display_name: str
     message: str = "Account created. Verify your email to activate."
+    organization: OrganizationSummary | None = None
 
 
 class VerifyEmailRequest(IrtiqaSchema):
@@ -42,6 +51,7 @@ class LoginResponse(IrtiqaSchema):
     refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
+    organization: OrganizationSummary | None = None
 
 
 class RefreshTokenRequest(IrtiqaSchema):
