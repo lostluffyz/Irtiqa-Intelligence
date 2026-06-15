@@ -23,6 +23,8 @@ Current architectural direction:
 *   **Personalization Agent**: Generation of tailored, multi-variant outreach copy based on all accumulated intelligence.
 *   **Background Job Foundation**: In-process job scheduling, execution, and monitoring for agents and workflows implemented and tested.
 *   **Intelligence Pipeline Workflow**: End-to-end orchestration chaining all 5 agents into a single pipeline triggered via `POST /intelligence/pipeline`.
+*   **Multi-Tenancy Phase 1**: Organization and Membership foundation with owner-protection, role management, 5-step slug generation, and `create_with_owner()` atomicity.
+*   **Authentication System**: RS256 JWT, bcrypt password hashing, email verification, database-backed rate limiting, self-service account deletion, Swagger/OpenAPI bearer auth integration.
 
 ### Next Steps
 
@@ -109,7 +111,7 @@ Current status:
 - Intelligence Scoring Agent is complete.
 - Personalization Agent is complete.
 - Task 12, Background Job Foundation, is complete.
-- Current full test suite result is `330 passed` (306 SQLite + 24 PostgreSQL).
+- Current full test suite result is `421 passed` (397 SQLite + 24 PostgreSQL).
 - Evidence records system implemented with dedicated `evidence_records` table, service, API, and agent integration.
 - Intelligence Pipeline workflow implemented: chains all 5 agents (Deep Scraper → Technographic → Intent Signal → Intelligence Scoring → Personalization) into a single orchestrated run triggered via API.
 - Alembic schema drift check reports no new upgrade operations after upgrading to head.
@@ -121,17 +123,17 @@ Current status:
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `330 passed` (306 SQLite + 24 PostgreSQL).
+- Current test count: `421 passed` (397 SQLite + 24 PostgreSQL).
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, Evidence Records System, and Intelligence Pipeline Workflow are implemented.
+- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, Evidence Records System, Intelligence Pipeline Workflow, and Multi-Tenancy Phase 1 (Organization & Membership) are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints for all models exist; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent exist; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- CI status: GitHub Actions workflow configured with ruff, mypy, compileall validation and full test suite (308 tests: 284 SQLite + 24 PostgreSQL) on every push and pull request.
+- CI status: GitHub Actions workflow configured with ruff, mypy, compileall validation and full test suite (421 tests: 397 SQLite + 24 PostgreSQL) on every push and pull request.
 - Next milestone: external integrations and orchestration.
 
 ## Database Schema
 
-The implemented schema contains ten core tables:
+The implemented schema contains twelve core tables:
 
 - `companies`
 - `contacts`
@@ -141,6 +143,8 @@ The implemented schema contains ten core tables:
 - `intelligence_scores`
 - `outreach_messages`
 - `evidence_records`
+- `memberships`
+- `organizations`
 - `agent_runs`
 - `jobs`
 
@@ -175,6 +179,7 @@ agent_runs 1--many jobs
 
 intelligence_scores 1--many outreach_messages
 
+organizations 1--many memberships (owner, admin, member, viewer)
 jobs 1--many agent_runs (optional, nullable)
 ```
 
@@ -237,6 +242,8 @@ Implemented SQLAlchemy models in `app/models/`:
 - `intent_signal.py`
 - `intelligence_score.py`
 - `job.py`
+- `membership.py`
+- `organization.py`
 - `outreach_message.py`
 - `agent_run.py`
 
@@ -463,6 +470,8 @@ Implemented in `app/repositories/`:
 - `intelligence_score_repository.py`
 - `outreach_message_repository.py`
 - `agent_run_repository.py`
+- `membership_repository.py`
+- `organization_repository.py`
 
 Repository convention:
 
@@ -483,6 +492,10 @@ Implemented in `app/services/`:
 - `intelligence_score_service.py`
 - `outreach_message_service.py`
 - `agent_run_service.py`
+- `auth_service.py`
+- `evidence_service.py`
+- `membership_service.py`
+- `organization_service.py`
 
 Service convention:
 
@@ -508,6 +521,9 @@ Implemented Pydantic v2 schemas in `app/schemas/`:
 - `intelligence_score.py`
 - `outreach_message.py`
 - `agent_run.py`
+- `auth.py`
+- `membership.py`
+- `organization.py`
 
 Schema convention:
 
@@ -529,6 +545,9 @@ Implemented Alembic setup:
 - `database/migrations/versions/20260531_0002_database_hardening.py`
 - `database/migrations/versions/20260603_0003_add_website_content_columns.py`
 - `database/migrations/versions/20260609_0003_add_jobs_table.py`
+- `database/migrations/versions/20260611_0004_create_evidence_records.py`
+- `database/migrations/versions/20260612_0005_create_auth_tables.py`
+- `database/migrations/versions/20260613_0006_create_organizations_memberships.py`
 
 ### Tests
 
@@ -623,7 +642,7 @@ python -m pytest
 Result:
 
 ```text
-330 passed (306 SQLite + 24 PostgreSQL)
+421 passed (397 SQLite + 24 PostgreSQL)
 ```
 
 PostgreSQL verification tests:
@@ -774,20 +793,20 @@ Documentation currently aligned with implemented schema:
 
 Known issues or gaps:
 
-- CRUD API routes currently exist for all current persisted entities: companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs.
-- Workflow foundation, runner, and `score_refresh` exist.
-- Agent Interface Foundation is implemented. Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are completed.
 - No Docker or deployment configuration exists yet.
 - No repository methods enforce domain-level validation.
 - `technology_catalog` is not implemented; `technologies` currently stores company-specific detections directly.
 - There is no dedicated `workflow_runs` table; workflow state is expected to be inferred from `agent_runs` for now.
+- Multi-Tenancy Phase 2 (JWT org claims, TenantContext, auth integration) is planned.
+- Multi-Tenancy Phase 3 (organization_id on domain tables, tenant-scoped queries) is planned.
+- Invitations and API Keys are planned for future phases.
 
 ## CI/CD Pipeline
 
 CI is configured with GitHub Actions. Every push and pull request runs:
 
 - **validate** job: ruff linting (advisory), mypy type checking (advisory), compileall syntax verification (blocking).
-- **test** job: SQLite migration application, alembic schema drift check, SQLite full test suite (306 tests, blocking), PostgreSQL 18 service container with migration application and 24 compatibility tests (blocking).
+- **test** job: SQLite migration application, alembic schema drift check, SQLite full test suite (397 tests, blocking), PostgreSQL 18 service container with migration application and 24 compatibility tests (blocking).
 
 Ruff and mypy are in advisory mode during the current phase to allow incremental debt reduction. They report violations as warnings in the check output but do not block the pipeline. Test execution is the primary merge gate. A future milestone will remove `continue-on-error` after pre-existing code quality issues are resolved.
 

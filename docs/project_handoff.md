@@ -466,7 +466,7 @@ python -m pytest
 Result:
 
 ```text
-330 passed (306 SQLite + 24 PostgreSQL)
+421 passed (397 SQLite + 24 PostgreSQL)
 ```
 
 Current test coverage verifies:
@@ -555,9 +555,9 @@ Current health:
 
 - Foundation status: healthy.
 - Stage: Backend Intelligence Agents
-- Test Count: `330 passed` (306 SQLite + 24 PostgreSQL)
+- Test Count: `421 passed` (397 SQLite + 24 PostgreSQL)
 - Remaining work: PostgreSQL scaling, deployment.
-- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Background Job Foundation, Evidence Records System, Intelligence Pipeline Workflow, structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
+- Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Background Job Foundation, Evidence Records System, Intelligence Pipeline Workflow, Multi-Tenancy Phase 1 (Organization & Membership), Authentication (RS256 JWT, bcrypt, email verification, rate limiting), structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
 - CI status: GitHub Actions workflow configured with ruff (advisory), mypy (advisory), compileall validation, and full test suite (330 tests: 306 SQLite + 24 PostgreSQL) on every push and pull request. Ruff and mypy are advisory to allow incremental debt reduction; test execution is the primary merge gate.
 - Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; evidence API endpoints (by target, source, company, agent run, summary, detail) exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are implemented; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, Agent Interface Foundation, and Background Job Foundation.
