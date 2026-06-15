@@ -39,11 +39,13 @@ def register(
         message = f"Account created. Verify your email. Token: {token}"
     else:
         message = "Account created. Verify your email to activate."
+    org_data = getattr(user, "_organization_summary", None)
     return RegisterResponse(
         id=user.id,
         email=user.email,
         display_name=user.display_name,
         message=message,
+        organization=org_data,
     )
 
 
@@ -63,7 +65,7 @@ def login(
     auth_service: AuthService = Depends(get_auth_service),
 ) -> LoginResponse:
     ip_address = request.client.host if request.client else "unknown"
-    user, access_token, refresh_token = auth_service.login(
+    user, access_token, refresh_token, org_summary = auth_service.login(
         email=payload.email,
         password=payload.password,
         ip_address=ip_address,
@@ -78,6 +80,7 @@ def login(
             is_active=user.is_active,
             created_at=user.created_at,
         ),
+        organization=org_summary,
     )
 
 
