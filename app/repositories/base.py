@@ -52,6 +52,32 @@ class BaseRepository(Generic[ModelT]):
     def exists(self, entity_id: str) -> bool:
         return self.get(entity_id) is not None
 
+    def _apply_tenant_filter(
+        self,
+        statement: Select[tuple[ModelT]],
+        organization_id: str | None = None,
+    ) -> Select[tuple[ModelT]]:
+        """Add ``organization_id = :org_id`` to the WHERE clause.
+
+        Only applies when the model has an ``organization_id`` column.
+        If ``organization_id`` is ``None``, no filter is added.
+        """
+        if organization_id is not None and hasattr(self.model, "organization_id"):
+            return statement.where(self.model.organization_id == organization_id)
+        return statement
+
+    def _check_tenant_filter(
+        self,
+        statement: Select[tuple[ModelT]],
+        organization_id: str | None = None,
+    ) -> None:
+        """Log a warning if a tenant-scoped model is queried without ``organization_id``."""
+        if organization_id is None and hasattr(self.model, "organization_id"):
+            self.logger.warning(
+                "Tenant-scoped query without organization_id filter",
+                extra={"model": self.model.__name__},
+            )
+
     def scalar_one_or_none(self, statement: Select[tuple[ModelT]]) -> ModelT | None:
         return self.session.scalars(statement).one_or_none()
 

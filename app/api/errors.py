@@ -14,6 +14,7 @@ from app.core.errors import (
     EntityConflictError,
     EntityNotFoundError,
     IrtiqaError,
+    PermissionError,
     ServiceError,
     ValidationError,
 )
@@ -72,6 +73,8 @@ def _status_code_for_error(exc: IrtiqaError) -> int:
         return status.HTTP_404_NOT_FOUND
     if isinstance(exc, (EntityConflictError, ServiceError)):
         return status.HTTP_409_CONFLICT
+    if isinstance(exc, PermissionError):
+        return status.HTTP_403_FORBIDDEN
     if isinstance(exc, ValidationError):
         return status.HTTP_422_UNPROCESSABLE_ENTITY
     if isinstance(exc, DatabaseConnectionError):

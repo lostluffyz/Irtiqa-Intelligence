@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
+    from app.models.membership import Membership
     from app.models.refresh_token import RefreshToken
     from app.models.email_verification_token import EmailVerificationToken
     from app.models.password_reset_token import PasswordResetToken
@@ -35,5 +36,8 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="user", cascade="all, delete-orphan",
     )
     password_reset_tokens: Mapped[list[PasswordResetToken]] = relationship(
+        back_populates="user", cascade="all, delete-orphan",
+    )
+    memberships: Mapped[list[Membership]] = relationship(
         back_populates="user", cascade="all, delete-orphan",
     )

@@ -43,7 +43,5 @@ class Membership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(50), nullable=False, default="member",
     )
 
-    # back_populates on user will be added in Phase 2 when User.memberships
-    # is introduced alongside auth integration.
-    user: Mapped[User] = relationship()
+    user: Mapped[User] = relationship(back_populates="memberships")
     organization: Mapped[Organization] = relationship(back_populates="memberships")
