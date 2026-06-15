@@ -159,6 +159,12 @@ class AgentTimeoutError(AgentNetworkError):
     default_message = "Agent operation timed out."
 
 
+class PermissionError(IrtiqaError):
+    default_code = "irtiqa.forbidden"
+    default_message = "You do not have permission to perform this action."
+    default_log_level = logging.WARNING
+
+
 class ExternalIntegrationError(IrtiqaError):
     default_code = "irtiqa.external_integration_error"
     default_message = "An external integration failed."
@@ -180,6 +186,7 @@ __all__ = [
     "EntityNotFoundError",
     "ExternalIntegrationError",
     "IrtiqaError",
+    "PermissionError",
     "RepositoryError",
     "ServiceError",
     "ValidationError",

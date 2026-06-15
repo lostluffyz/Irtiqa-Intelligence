@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.core.security import decode_access_token
+from app.core.tenant import TenantContext
 from app.database.session import SessionLocal
 from app.services import (
     AgentRunService,
@@ -116,3 +118,64 @@ def get_current_user(
         "is_active": user.is_active,
         "created_at": user.created_at,
     }
+
+
+def get_current_organization(
+    authorization: str | None = Header(default=None),
+    auth_service: AuthService = Depends(get_auth_service),
+    membership_service: MembershipService = Depends(get_membership_service),
+) -> TenantContext:
+    """Authenticate the user and verify membership in the org specified
+    in the JWT claims.
+
+    Performs a membership database lookup on every request.
+    This is the F-1 fix: never trust the JWT claim alone.
+    """
+    if authorization is None or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = authorization.removeprefix("Bearer ")
+
+    # Decode JWT — reuses existing auth logic
+    user = auth_service.authenticate_with_token(token)
+    user_id = user["id"] if isinstance(user, dict) else user.id
+
+    # Decode JWT a second time to extract org/role claims
+    # (Two decodes per request. This avoids refactoring get_current_user()
+    # which would affect 30+ callers. Cost: ~1ms.)
+    try:
+        payload = decode_access_token(token)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    org_id = payload.get("org")
+    jwt_role = payload.get("role")
+
+    if org_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No organization context. Please authenticate with an organization.",
+        )
+
+    # Verify membership (F-1 fix: never trust JWT alone)
+    membership = membership_service.get_membership(user_id, org_id)
+    if membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this organization.",
+        )
+
+    return TenantContext(
+        organization_id=org_id,
+        user_id=user_id,
+        role=membership.role,
+        is_api_key=False,
+    )

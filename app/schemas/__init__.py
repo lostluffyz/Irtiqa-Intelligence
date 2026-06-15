@@ -1,6 +1,7 @@
 from app.schemas.agent_run import AgentRunCreate, AgentRunList, AgentRunRead, AgentRunUpdate
 from app.schemas.company import CompanyCreate, CompanyList, CompanyRead, CompanyUpdate
 from app.schemas.evidence import EvidenceItem, EvidenceList, EvidenceRead, EvidenceSummary
+from app.schemas.auth import OrganizationSummary
 from app.schemas.contact import ContactCreate, ContactList, ContactRead, ContactUpdate
 from app.schemas.intent_signal import (
     IntentSignalCreate,
@@ -75,6 +76,7 @@ __all__ = [
     "OrganizationCreate",
     "OrganizationList",
     "OrganizationRead",
+    "OrganizationSummary",
     "OrganizationUpdate",
     "OutreachMessageCreate",
     "OutreachMessageList",
