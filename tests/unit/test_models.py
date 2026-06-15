@@ -12,6 +12,8 @@ from app.models.failed_login_attempt import FailedLoginAttempt
 from app.models.intent_signal import IntentSignal
 from app.models.intelligence_score import IntelligenceScore
 from app.models.job import Job
+from app.models.membership import Membership
+from app.models.organization import Organization
 from app.models.outreach_message import OutreachMessage
 from app.models.password_reset_token import PasswordResetToken
 from app.models.refresh_token import RefreshToken
@@ -31,6 +33,8 @@ def test_model_metadata_contains_current_schema_tables() -> None:
         "intelligence_scores",
         "intent_signals",
         "jobs",
+        "memberships",
+        "organizations",
         "outreach_messages",
         "password_reset_tokens",
         "refresh_tokens",
@@ -48,6 +52,8 @@ def test_models_have_primary_key_and_timestamps() -> None:
         EvidenceRecord,
         IntentSignal,
         IntelligenceScore,
+        Membership,
+        Organization,
         OutreachMessage,
         Technology,
         User,

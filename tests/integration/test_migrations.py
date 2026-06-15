@@ -20,6 +20,8 @@ EXPECTED_TABLES = {
     "intelligence_scores",
     "intent_signals",
     "jobs",
+    "memberships",
+    "organizations",
     "outreach_messages",
     "password_reset_tokens",
     "refresh_tokens",
@@ -42,7 +44,7 @@ def test_migration_records_current_revision(alembic_config: Config, sqlite_datab
     with sqlite3.connect(database_path) as connection:
         revision = connection.execute("select version_num from alembic_version").fetchone()[0]
 
-    assert revision == "20260612_0005"
+    assert revision == "20260613_0006"
 
 
 def test_migration_schema_matches_model_metadata(migrated_engine) -> None:
