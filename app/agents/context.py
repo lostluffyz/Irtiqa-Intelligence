@@ -25,7 +25,7 @@ class AgentContext(IrtiqaSchema):
     agent_name: str = Field(min_length=1, max_length=150)
     company_id: str = Field(min_length=36, max_length=36)
     contact_id: str | None = Field(default=None, min_length=36, max_length=36)
-    organization_id: str = Field(min_length=36, max_length=36)  # NEW
+    organization_id: str | None = Field(default=None, min_length=36, max_length=36)  # NEW
     workflow_name: str | None = Field(default=None, min_length=1, max_length=150)
     correlation_id: str | None = Field(default=None, min_length=1, max_length=100)
     options: MappingProxyType[str, Any] = Field(default_factory=lambda: MappingProxyType({}))

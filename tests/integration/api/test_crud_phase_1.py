@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.api.dependencies import get_current_organization
 from app.core.config import AuthSettings, DatabaseSettings, LoggingSettings, Settings
+from app.core.tenant import TenantContext
 from app.database import session as database_session
 from app.main import create_app
 
@@ -30,10 +33,22 @@ def api_session_factory(
 
 
 @pytest.fixture()
-def client(api_session_factory: sessionmaker[Session]) -> Iterator[TestClient]:
+def tenant_context() -> TenantContext:
+    return TenantContext(
+        organization_id=str(uuid4()),
+        user_id=str(uuid4()),
+        role="owner",
+        is_api_key=False,
+    )
+
+
+@pytest.fixture()
+def client(api_session_factory: sessionmaker[Session], tenant_context: TenantContext) -> Iterator[TestClient]:
     app = create_app(_test_settings(), configure_logging_on_startup=False)
+    app.dependency_overrides[get_current_organization] = lambda: tenant_context
     with TestClient(app) as test_client:
         yield test_client
+    app.dependency_overrides.pop(get_current_organization, None)
 
 
 def test_company_crud_endpoints(client: TestClient) -> None:

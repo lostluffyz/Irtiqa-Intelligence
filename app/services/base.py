@@ -25,12 +25,14 @@ class BaseService(Generic[ModelT, RepositoryT]):
     def __init__(self) -> None:
         self.logger = get_logger(f"services.{self.__class__.__name__}")
 
-    def create(self, organization_id: str, **values: Any) -> ModelT:
+    def create(self, organization_id: str | None = None, **values: Any) -> ModelT:
         self._validate_create_values(values)
 
         def operation(session: Session) -> ModelT:
             repository = self._repository(session)
-            values_with_org = {"organization_id": organization_id, **values}
+            values_with_org = dict(values)
+            if organization_id is not None:
+                values_with_org["organization_id"] = organization_id
             self._before_create(repository, values_with_org)
             entity = self.model(**values_with_org)
             repository.add(entity)
