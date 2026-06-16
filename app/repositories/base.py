@@ -32,12 +32,21 @@ class BaseRepository(Generic[ModelT]):
         )
         return self.session.get(self.model, entity_id)
 
-    def list(self, *, limit: int = 100, offset: int = 0) -> Sequence[ModelT]:
+    def list(
+        self,
+        *,
+        organization_id: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Sequence[ModelT]:
         self.logger.debug(
             "Listing entities",
             extra={"model": self.model.__name__, "limit": limit, "offset": offset},
         )
-        statement = select(self.model).offset(offset).limit(limit)
+        statement = select(self.model)
+        statement = self._apply_tenant_filter(statement, organization_id)
+        self._check_tenant_filter(statement, organization_id)
+        statement = statement.offset(offset).limit(limit)
         return self.session.scalars(statement).all()
 
     def count(self) -> int:

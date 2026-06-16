@@ -22,6 +22,8 @@ class JobRepository(BaseRepository[Job]):
         )
         return self.scalars(statement)
 
-    def get_job_by_agent_run_id(self, agent_run_id: str) -> Job | None:
+    def get_job_by_agent_run_id(self, agent_run_id: str, *, organization_id: str | None = None) -> Job | None:
         statement = select(Job).where(Job.agent_run_id == agent_run_id)
+        if organization_id is not None:
+            statement = self._apply_tenant_filter(statement, organization_id)
         return self.scalar_one_or_none(statement)
