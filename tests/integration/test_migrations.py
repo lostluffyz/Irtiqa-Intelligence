@@ -44,7 +44,7 @@ def test_migration_records_current_revision(alembic_config: Config, sqlite_datab
     with sqlite3.connect(database_path) as connection:
         revision = connection.execute("select version_num from alembic_version").fetchone()[0]
 
-    assert revision == "20260613_0006"
+    assert revision == "20260616_0007"
 
 
 def test_migration_schema_matches_model_metadata(migrated_engine) -> None:

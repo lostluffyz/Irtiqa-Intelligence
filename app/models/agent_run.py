@@ -35,8 +35,15 @@ class AgentRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_agent_runs_finished_at", "finished_at"),
         Index("ix_agent_runs_agent_name_status", "agent_name", "status"),
         Index("ix_agent_runs_workflow_name_status", "workflow_name", "status"),
+        Index("ix_agent_runs_organization_id", "organization_id"),
+        Index("ix_agent_runs_org_agent_status", "organization_id", "agent_name", "status"),
     )
 
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     company_id: Mapped[str | None] = mapped_column(
         String(36),
         ForeignKey("companies.id", ondelete="SET NULL"),

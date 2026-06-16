@@ -23,16 +23,21 @@ class Contact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="status_allowed",
         ),
         Index("ix_contacts_company_id", "company_id"),
-        Index("ix_contacts_email", "email", unique=True),
         Index("ix_contacts_linkedin_url", "linkedin_url"),
         Index("ix_contacts_department", "department"),
         Index("ix_contacts_seniority", "seniority"),
         Index("ix_contacts_status", "status"),
+        Index("ix_contacts_organization_id", "organization_id"),
     )
 
     company_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
     first_name: Mapped[str | None] = mapped_column(String(150))

@@ -43,6 +43,7 @@ class IntelligenceScore(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "confidence >= 0.0 AND confidence <= 1.0",
             name="confidence_range",
         ),
+        Index("ix_intelligence_scores_organization_id", "organization_id"),
         Index("ix_intelligence_scores_company_id", "company_id"),
         Index("ix_intelligence_scores_contact_id", "contact_id"),
         Index("ix_intelligence_scores_technology_id", "technology_id"),
@@ -51,10 +52,14 @@ class IntelligenceScore(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_intelligence_scores_confidence", "confidence"),
         Index("ix_intelligence_scores_score_version", "score_version"),
         Index("ix_intelligence_scores_scored_at", "scored_at"),
-        Index("ix_intelligence_scores_company_total", "company_id", "total_score"),
         Index("ix_intelligence_scores_contact_total", "contact_id", "total_score"),
     )
 
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     company_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("companies.id", ondelete="CASCADE"),

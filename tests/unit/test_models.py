@@ -82,6 +82,7 @@ def test_company_relationships_are_declared() -> None:
 
 def test_relationships_persist_and_load(
     session,
+    organization,
     company,
     contact,
     website,
@@ -91,6 +92,10 @@ def test_relationships_persist_and_load(
     intelligence_score,
     outreach_message,
 ) -> None:
+    session.add(organization)
+    session.flush()
+    session.add(company)
+    session.flush()
     session.add(outreach_message)
     session.add(intent_signal)
     session.commit()

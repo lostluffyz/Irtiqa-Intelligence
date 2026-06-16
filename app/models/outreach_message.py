@@ -26,6 +26,7 @@ class OutreachMessage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "confidence >= 0.0 AND confidence <= 1.0",
             name="confidence_range",
         ),
+        Index("ix_outreach_messages_organization_id", "organization_id"),
         Index("ix_outreach_messages_company_id", "company_id"),
         Index("ix_outreach_messages_contact_id", "contact_id"),
         Index("ix_outreach_messages_intelligence_score_id", "intelligence_score_id"),
@@ -36,6 +37,11 @@ class OutreachMessage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_outreach_messages_generated_at", "generated_at"),
     )
 
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     company_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("companies.id", ondelete="CASCADE"),
