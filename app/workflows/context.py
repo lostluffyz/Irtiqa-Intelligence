@@ -18,6 +18,7 @@ class WorkflowContext(IrtiqaSchema):
     workflow_name: str = Field(min_length=1, max_length=150)
     company_id: str | None = Field(default=None, min_length=36, max_length=36)
     contact_id: str | None = Field(default=None, min_length=36, max_length=36)
+    organization_id: str | None = Field(default=None, min_length=36, max_length=36)  # NEW
     correlation_id: str | None = Field(default=None, min_length=1, max_length=100)
     requested_by: str | None = Field(default=None, min_length=1, max_length=150)
     options: MappingProxyType[str, Any] = Field(default_factory=lambda: MappingProxyType({}))

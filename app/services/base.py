@@ -25,13 +25,14 @@ class BaseService(Generic[ModelT, RepositoryT]):
     def __init__(self) -> None:
         self.logger = get_logger(f"services.{self.__class__.__name__}")
 
-    def create(self, **values: Any) -> ModelT:
+    def create(self, organization_id: str, **values: Any) -> ModelT:
         self._validate_create_values(values)
 
         def operation(session: Session) -> ModelT:
             repository = self._repository(session)
-            self._before_create(repository, values)
-            entity = self.model(**values)
+            values_with_org = {"organization_id": organization_id, **values}
+            self._before_create(repository, values_with_org)
+            entity = self.model(**values_with_org)
             repository.add(entity)
             session.flush()
             return entity
@@ -60,12 +61,12 @@ class BaseService(Generic[ModelT, RepositoryT]):
             raise error
         return entity
 
-    def list(self, *, limit: int = 100, offset: int = 0) -> Sequence[ModelT]:
+    def list(self, *, organization_id: str | None = None, limit: int = 100, offset: int = 0) -> Sequence[ModelT]:
         self._validate_limit(limit)
         self._validate_offset(offset)
 
         def operation(session: Session) -> Sequence[ModelT]:
-            return self._repository(session).list(limit=limit, offset=offset)
+            return self._repository(session).list(organization_id=organization_id, limit=limit, offset=offset)
 
         return self._run_in_transaction("list", operation)
 
