@@ -8,6 +8,8 @@ from sqlalchemy import Engine, create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
+from uuid import uuid4
+
 from app.core.config import DatabaseSettings
 from app.database import session as database_session
 from app.database.engine import create_database_engine
@@ -18,6 +20,7 @@ from app.models.contact import Contact
 from app.models.intent_signal import IntentSignal
 from app.models.intelligence_score import IntelligenceScore
 from app.models.job import Job
+from app.models.organization import Organization
 from app.models.outreach_message import OutreachMessage
 from app.models.technology import Technology
 from app.models.website import Website
@@ -150,7 +153,10 @@ def test_postgresql_check_constraints_exist(postgresql_engine: Engine) -> None:
 
 @postgresql_required
 def test_postgresql_create_and_read_company(postgresql_session: Session) -> None:
-    company = Company(name="PG Test Co", domain="pg-test-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="PG Org", slug="pg-org", status="active"))
+    postgresql_session.flush()
+    company = Company(organization_id=org_id, name="PG Test Co", domain="pg-test-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(company)
     postgresql_session.commit()
 
@@ -162,11 +168,14 @@ def test_postgresql_create_and_read_company(postgresql_session: Session) -> None
 
 @postgresql_required
 def test_postgresql_unique_domain_enforced(postgresql_session: Session) -> None:
-    c1 = Company(name="Unique Co", domain="unique-domain-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Unique Org", slug="unique-org", status="active"))
+    postgresql_session.flush()
+    c1 = Company(organization_id=org_id, name="Unique Co", domain="unique-domain-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(c1)
     postgresql_session.commit()
 
-    c2 = Company(name="Duplicate Co", domain="unique-domain-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
+    c2 = Company(organization_id=org_id, name="Duplicate Co", domain="unique-domain-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(c2)
     with pytest.raises(IntegrityError):
         postgresql_session.commit()
@@ -175,7 +184,7 @@ def test_postgresql_unique_domain_enforced(postgresql_session: Session) -> None:
 
 @postgresql_required
 def test_postgresql_foreign_key_enforced(postgresql_session: Session) -> None:
-    contact = Contact(company_id="00000000-0000-0000-0000-000000000000", full_name="Orphan Contact", status="active", created_at=utc_now(), updated_at=utc_now())
+    contact = Contact(organization_id=str(uuid4()), company_id="00000000-0000-0000-0000-000000000000", full_name="Orphan Contact", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(contact)
     with pytest.raises(IntegrityError):
         postgresql_session.commit()
@@ -184,7 +193,10 @@ def test_postgresql_foreign_key_enforced(postgresql_session: Session) -> None:
 
 @postgresql_required
 def test_postgresql_status_constraint_enforced(postgresql_session: Session) -> None:
-    company = Company(name="Bad Status", domain="bad-status-1.example", status="invalid_status", created_at=utc_now(), updated_at=utc_now())
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Status Org", slug="status-org", status="active"))
+    postgresql_session.flush()
+    company = Company(organization_id=org_id, name="Bad Status", domain="bad-status-1.example", status="invalid_status", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(company)
     with pytest.raises(IntegrityError):
         postgresql_session.commit()
@@ -193,7 +205,10 @@ def test_postgresql_status_constraint_enforced(postgresql_session: Session) -> N
 
 @postgresql_required
 def test_postgresql_confidence_constraint_enforced(postgresql_session: Session) -> None:
-    company = Company(name="Conf Co", domain="conf-co-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Conf Org", slug="conf-org", status="active"))
+    postgresql_session.flush()
+    company = Company(organization_id=org_id, name="Conf Co", domain="conf-co-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(company)
     postgresql_session.commit()
 
@@ -219,31 +234,37 @@ def test_postgresql_confidence_constraint_enforced(postgresql_session: Session) 
 
 @postgresql_required
 def test_postgresql_company_repository(postgresql_session: Session) -> None:
-    company = Company(name="Repo Co", domain="repo-co-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Repo Org", slug="repo-org", status="active"))
+    postgresql_session.flush()
+    company = Company(organization_id=org_id, name="Repo Co", domain="repo-co-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(company)
     postgresql_session.commit()
 
     repo = CompanyRepository(postgresql_session)
     assert repo.get(company.id) is not None
-    assert repo.get_by_domain("repo-co-1.example") is not None
-    assert repo.search_by_name("Repo") == [company]
-    assert repo.list_by_status("active") == [company]
+    assert repo.get_by_domain("repo-co-1.example", organization_id=org_id) is not None
+    assert repo.search_by_name("Repo", organization_id=org_id) == [company]
+    assert repo.list_by_status("active", organization_id=org_id) == [company]
 
 
 @postgresql_required
 def test_postgresql_contact_repository(postgresql_session: Session) -> None:
-    company = Company(name="Contact Parent", domain="contact-parent-pg-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Contact Repo Org", slug="contact-repo", status="active"))
+    postgresql_session.flush()
+    company = Company(organization_id=org_id, name="Contact Parent", domain="contact-parent-pg-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(company)
     postgresql_session.commit()
 
-    contact = Contact(company_id=company.id, full_name="PG Contact", email="pg-contact-1@example.com", status="active", created_at=utc_now(), updated_at=utc_now())
+    contact = Contact(organization_id=org_id, company_id=company.id, full_name="PG Contact", email="pg-contact-1@example.com", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(contact)
     postgresql_session.commit()
 
     repo = ContactRepository(postgresql_session)
-    assert repo.get_by_email("pg-contact-1@example.com") is not None
-    assert repo.list_by_company(company.id) == [contact]
-    assert repo.list_by_status("active") == [contact]
+    assert repo.get_by_email("pg-contact-1@example.com", organization_id=org_id) is not None
+    assert repo.list_by_company(company.id, organization_id=org_id) == [contact]
+    assert repo.list_by_status("active", organization_id=org_id) == [contact]
 
 
 # ─── Services ────────────────────────────────────────────────────────────────
@@ -252,13 +273,16 @@ def test_postgresql_contact_repository(postgresql_session: Session) -> None:
 @postgresql_required
 def test_postgresql_company_service(postgresql_session: Session) -> None:
     _override_session(postgresql_session)
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Svc Org", slug="svc-org", status="active"))
+    postgresql_session.commit()
     service = CompanyService()
-    company = service.create(name="Svc Co", domain="svc-co-pg-1.example", industry="software", status="active")
+    company = service.create(organization_id=org_id, name="Svc Co", domain="svc-co-pg-1.example", industry="software", status="active")
     company_id = company.id
 
     assert service.get(company_id) is not None
-    assert service.get_by_domain("svc-co-pg-1.example") is not None
-    results = service.search_by_name("Svc")
+    assert service.get_by_domain("svc-co-pg-1.example", organization_id=org_id) is not None
+    results = service.search_by_name("Svc", organization_id=org_id)
     assert len(results) == 1
     assert results[0].id == company_id
 
@@ -266,12 +290,15 @@ def test_postgresql_company_service(postgresql_session: Session) -> None:
 @postgresql_required
 def test_postgresql_service_entity_conflict(postgresql_session: Session) -> None:
     _override_session(postgresql_session)
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Conflict Org", slug="conflict-org", status="active"))
+    postgresql_session.commit()
     service = CompanyService()
-    service.create(name="Conflict Co", domain="conflict-pg-1.example", status="active")
+    service.create(organization_id=org_id, name="Conflict Co", domain="conflict-pg-1.example", status="active")
 
     from app.core.errors import EntityConflictError
     with pytest.raises(EntityConflictError):
-        service.create(name="Conflict Co 2", domain="conflict-pg-1.example", status="active")
+        service.create(organization_id=org_id, name="Conflict Co 2", domain="conflict-pg-1.example", status="active")
 
 
 @postgresql_required
@@ -285,15 +312,21 @@ def test_postgresql_service_entity_not_found(postgresql_session: Session) -> Non
 @postgresql_required
 def test_postgresql_check_constraint_rejected_as_conflict(postgresql_session: Session) -> None:
     _override_session(postgresql_session)
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="CK Org", slug="ck-org", status="active"))
+    postgresql_session.commit()
     from app.core.errors import EntityConflictError
     with pytest.raises(EntityConflictError):
-        CompanyService().create(name="Bad Status Co", domain="bad-status-svc-1.example", status="unsupported")
+        CompanyService().create(organization_id=org_id, name="Bad Status Co", domain="bad-status-svc-1.example", status="unsupported")
 
 
 @postgresql_required
 def test_postgresql_cascading_delete(postgresql_session: Session) -> None:
-    company = Company(name="Cascade Co", domain="cascade-pg-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
-    contact = Contact(company=company, full_name="Cascade Contact", status="active", created_at=utc_now(), updated_at=utc_now())
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Cascade Org", slug="cascade-org", status="active"))
+    postgresql_session.flush()
+    company = Company(organization_id=org_id, name="Cascade Co", domain="cascade-pg-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
+    contact = Contact(organization_id=org_id, company=company, full_name="Cascade Contact", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(contact)
     postgresql_session.commit()
 
@@ -306,11 +339,14 @@ def test_postgresql_cascading_delete(postgresql_session: Session) -> None:
 
 @postgresql_required
 def test_postgresql_set_null_on_delete_agent_run(postgresql_session: Session) -> None:
-    company = Company(name="SetNull Co", domain="setnull-pg-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="SetNull Org", slug="setnull-org", status="active"))
+    postgresql_session.flush()
+    company = Company(organization_id=org_id, name="SetNull Co", domain="setnull-pg-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(company)
     postgresql_session.commit()
 
-    agent_run = AgentRun(company_id=company.id, agent_name="setnull_agent", status="succeeded", started_at=utc_now(), finished_at=utc_now(), created_at=utc_now(), updated_at=utc_now())
+    agent_run = AgentRun(organization_id=org_id, company_id=company.id, agent_name="setnull_agent", status="succeeded", started_at=utc_now(), finished_at=utc_now(), created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(agent_run)
     postgresql_session.commit()
 
@@ -328,7 +364,10 @@ def test_postgresql_set_null_on_delete_agent_run(postgresql_session: Session) ->
 @postgresql_required
 def test_postgresql_timezone_aware_datetime_stored_and_retrieved(postgresql_session: Session) -> None:
     now = utc_now()
-    company = Company(name="TZ Co", domain="tz-co-pg-1.example", status="active", created_at=now, updated_at=now)
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="TZ Org", slug="tz-org", status="active"))
+    postgresql_session.flush()
+    company = Company(organization_id=org_id, name="TZ Co", domain="tz-co-pg-1.example", status="active", created_at=now, updated_at=now)
     postgresql_session.add(company)
     postgresql_session.commit()
 
@@ -343,8 +382,11 @@ def test_postgresql_timezone_aware_datetime_stored_and_retrieved(postgresql_sess
 @postgresql_required
 def test_postgresql_naive_datetime_accepted(postgresql_session: Session) -> None:
     naive = datetime(2026, 1, 1, 12, 0, 0)
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Naive Org", slug="naive-org", status="active"))
+    postgresql_session.flush()
     company = Company(
-        name="Naive Co", domain="naive-pg-1.example", status="active",
+        organization_id=org_id, name="Naive Co", domain="naive-pg-1.example", status="active",
         created_at=naive,
         updated_at=naive,
     )
@@ -362,10 +404,14 @@ def test_postgresql_naive_datetime_accepted(postgresql_session: Session) -> None
 @postgresql_required
 def test_postgresql_service_transaction_rolls_back_on_error(postgresql_session: Session) -> None:
     _override_session(postgresql_session)
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Rollback Org", slug="rollback-org", status="active"))
+    postgresql_session.commit()
     from app.core.errors import EntityConflictError
     try:
         with pytest.raises(EntityConflictError):
             CompanyService().create(
+                organization_id=org_id,
                 name="Invalid Status Company",
                 domain="invalid-status-1.example",
                 status="unsupported",
@@ -373,7 +419,7 @@ def test_postgresql_service_transaction_rolls_back_on_error(postgresql_session: 
     finally:
         pass
 
-    found = CompanyService().get_by_domain("invalid-status-1.example")
+    found = CompanyService().get_by_domain("invalid-status-1.example", organization_id=org_id)
     assert found is None
 
 
@@ -384,7 +430,10 @@ def test_postgresql_service_transaction_rolls_back_on_error(postgresql_session: 
 def test_postgresql_uuid_as_string(postgresql_session: Session) -> None:
     import uuid
     raw_uuid = str(uuid.uuid4())
-    company = Company(id=raw_uuid, name="UUID Co", domain="uuid-pg-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
+    org_id = str(uuid.uuid4())
+    postgresql_session.add(Organization(id=org_id, name="UUID Org", slug="uuid-org", status="active"))
+    postgresql_session.flush()
+    company = Company(organization_id=org_id, id=raw_uuid, name="UUID Co", domain="uuid-pg-1.example", status="active", created_at=utc_now(), updated_at=utc_now())
     postgresql_session.add(company)
     postgresql_session.commit()
 
@@ -399,14 +448,17 @@ def test_postgresql_uuid_as_string(postgresql_session: Session) -> None:
 @postgresql_required
 def test_postgresql_full_entity_graph(postgresql_session: Session) -> None:
     now = utc_now()
-    company = Company(name="Full Graph Co", domain="full-graph-pg-1.example", industry="software", status="active", created_at=now, updated_at=now)
-    contact = Contact(company=company, full_name="Full Graph Contact", email="full-1@graph.example", status="active", created_at=now, updated_at=now)
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Full Graph Org", slug="full-graph-org", status="active"))
+    postgresql_session.flush()
+    company = Company(organization_id=org_id, name="Full Graph Co", domain="full-graph-pg-1.example", industry="software", status="active", created_at=now, updated_at=now)
+    contact = Contact(organization_id=org_id, company=company, full_name="Full Graph Contact", email="full-1@graph.example", status="active", created_at=now, updated_at=now)
     website = Website(company=company, url="https://full-graph-pg-1.example", normalized_url="https://full-graph-pg-1.example/", created_at=now, updated_at=now)
-    agent_run = AgentRun(company=company, contact=contact, agent_name="full_graph_agent", status="succeeded", started_at=now, finished_at=now, created_at=now, updated_at=now)
+    agent_run = AgentRun(organization_id=org_id, company=company, contact=contact, agent_name="full_graph_agent", status="succeeded", started_at=now, finished_at=now, created_at=now, updated_at=now)
     technology = Technology(company=company, website=website, agent_run=agent_run, name="FullGraphCRM", category="crm", detection_method="html_signature", confidence=0.9, first_detected_at=now, last_detected_at=now, created_at=now, updated_at=now)
-    intent_signal = IntentSignal(company=company, contact=contact, website=website, technology=technology, agent_run=agent_run, signal_type="technology_change", signal_name="FullGraph CRM", strength=0.8, confidence=0.85, source_url="https://full-graph-pg-1.example", observed_at=now, created_at=now, updated_at=now)
-    score = IntelligenceScore(company=company, contact=contact, technology=technology, agent_run=agent_run, fit_score=80.0, intent_score=70.0, technographic_score=90.0, engagement_score=75.0, total_score=80.5, confidence=0.88, score_version="pg-test-v1", rationale="Full graph test.", scored_at=now, created_at=now, updated_at=now)
-    message = OutreachMessage(company=company, contact=contact, intelligence_score=score, agent_run=agent_run, channel="email", subject="Test", message_body="Full graph body.", personalization_angle="Full graph test", call_to_action="Book now", status="draft", confidence=0.8, generated_at=now, created_at=now, updated_at=now)
+    intent_signal = IntentSignal(organization_id=org_id, company=company, contact=contact, website=website, technology=technology, agent_run=agent_run, signal_type="technology_change", signal_name="FullGraph CRM", strength=0.8, confidence=0.85, source_url="https://full-graph-pg-1.example", observed_at=now, created_at=now, updated_at=now)
+    score = IntelligenceScore(organization_id=org_id, company=company, contact=contact, technology=technology, agent_run=agent_run, fit_score=80.0, intent_score=70.0, technographic_score=90.0, engagement_score=75.0, total_score=80.5, confidence=0.88, score_version="pg-test-v1", rationale="Full graph test.", scored_at=now, created_at=now, updated_at=now)
+    message = OutreachMessage(organization_id=org_id, company=company, contact=contact, intelligence_score=score, agent_run=agent_run, channel="email", subject="Test", message_body="Full graph body.", personalization_angle="Full graph test", call_to_action="Book now", status="draft", confidence=0.8, generated_at=now, created_at=now, updated_at=now)
 
     postgresql_session.add(message)
     postgresql_session.commit()
@@ -430,19 +482,22 @@ def test_postgresql_full_entity_graph(postgresql_session: Session) -> None:
 @postgresql_required
 def test_postgresql_job_create_and_query(postgresql_session: Session) -> None:
     _override_session(postgresql_session)
+    org_id = str(uuid4())
+    postgresql_session.add(Organization(id=org_id, name="Job Org", slug="job-org", status="active"))
+    postgresql_session.commit()
     from app.services.job_service import JobService
     from app.agents.context import AgentContext
 
     service = JobService()
     job = service.schedule_agent(
         name="pg_test_agent",
-        context=AgentContext(agent_name="pg_test_agent", company_id="11111111-1111-1111-1111-111111111111"),
+        context=AgentContext(agent_name="pg_test_agent", company_id="11111111-1111-1111-1111-111111111111", organization_id=org_id),
         max_retries=3,
     )
     assert job.status == "pending"
     assert job.retry_count == 0
 
-    jobs = service.list_jobs(status="pending", limit=10, offset=0)
+    jobs = service.list_jobs(organization_id=org_id, status="pending", limit=10, offset=0)
     assert len(jobs) >= 1
     assert any(j.id == job.id for j in jobs)
 
