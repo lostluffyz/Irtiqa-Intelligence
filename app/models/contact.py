@@ -28,6 +28,7 @@ class Contact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_contacts_seniority", "seniority"),
         Index("ix_contacts_status", "status"),
         Index("ix_contacts_organization_id", "organization_id"),
+        Index("uq_contacts_org_email", "organization_id", "email", unique=True),
     )
 
     company_id: Mapped[str] = mapped_column(
@@ -37,7 +38,7 @@ class Contact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     organization_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
+        ForeignKey("organizations.id", ondelete="CASCADE", name="fk_contacts_org"),
         nullable=False,
     )
     first_name: Mapped[str | None] = mapped_column(String(150))

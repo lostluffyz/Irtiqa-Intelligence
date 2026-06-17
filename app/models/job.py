@@ -39,7 +39,7 @@ class Job(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     organization_id: Mapped[str | None] = mapped_column(
         String(36),
-        ForeignKey("organizations.id", ondelete="SET NULL"),
+        ForeignKey("organizations.id", ondelete="SET NULL", name="fk_jobs_org"),
         nullable=True,
     )
     job_type: Mapped[str] = mapped_column(String(16), nullable=False)

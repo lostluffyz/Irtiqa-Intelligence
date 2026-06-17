@@ -53,11 +53,12 @@ class IntelligenceScore(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_intelligence_scores_score_version", "score_version"),
         Index("ix_intelligence_scores_scored_at", "scored_at"),
         Index("ix_intelligence_scores_contact_total", "contact_id", "total_score"),
+        Index("ix_intelligence_scores_org_company_total", "organization_id", "company_id", "total_score"),
     )
 
     organization_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
+        ForeignKey("organizations.id", ondelete="CASCADE", name="fk_intelligence_scores_org"),
         nullable=False,
     )
     company_id: Mapped[str] = mapped_column(

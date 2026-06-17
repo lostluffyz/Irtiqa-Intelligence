@@ -36,11 +36,12 @@ class IntentSignal(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_intent_signals_strength", "strength"),
         Index("ix_intent_signals_confidence", "confidence"),
         Index("ix_intent_signals_observed_at", "observed_at"),
+        Index("ix_intent_signals_org_company_type_observed", "organization_id", "company_id", "signal_type", "observed_at"),
     )
 
     organization_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
+        ForeignKey("organizations.id", ondelete="CASCADE", name="fk_intent_signals_org"),
         nullable=False,
     )
     company_id: Mapped[str] = mapped_column(

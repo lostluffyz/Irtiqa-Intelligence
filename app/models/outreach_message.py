@@ -35,11 +35,12 @@ class OutreachMessage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_outreach_messages_status", "status"),
         Index("ix_outreach_messages_confidence", "confidence"),
         Index("ix_outreach_messages_generated_at", "generated_at"),
+        Index("ix_outreach_messages_org_company", "organization_id", "company_id"),
     )
 
     organization_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
+        ForeignKey("organizations.id", ondelete="CASCADE", name="fk_outreach_messages_org"),
         nullable=False,
     )
     company_id: Mapped[str] = mapped_column(

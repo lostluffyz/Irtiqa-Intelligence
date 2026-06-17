@@ -29,11 +29,12 @@ class Company(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_companies_status", "status"),
         Index("ix_companies_created_at", "created_at"),
         Index("ix_companies_organization_id", "organization_id"),
+        Index("uq_companies_org_domain", "organization_id", "domain", unique=True),
     )
 
     organization_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
+        ForeignKey("organizations.id", ondelete="CASCADE", name="fk_companies_org"),
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)

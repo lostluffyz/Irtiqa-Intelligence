@@ -22,7 +22,7 @@ def upgrade() -> None:
     # ── Company ──────────────────────────────────────────────────────────
     with op.batch_alter_table("companies") as batch_op:
         batch_op.add_column(sa.Column("organization_id", sa.String(36), nullable=False))
-        batch_op.create_foreign_key("fk_companies_org", "organizations", ["organization_id"], ["id"])
+        batch_op.create_foreign_key("fk_companies_org", "organizations", ["organization_id"], ["id"], ondelete="CASCADE")
         batch_op.drop_index("ix_companies_domain")
         batch_op.create_index("ix_companies_organization_id", ["organization_id"])
         batch_op.create_index("uq_companies_org_domain", ["organization_id", "domain"], unique=True)
@@ -30,7 +30,7 @@ def upgrade() -> None:
     # ── Contact ──────────────────────────────────────────────────────────
     with op.batch_alter_table("contacts") as batch_op:
         batch_op.add_column(sa.Column("organization_id", sa.String(36), nullable=False))
-        batch_op.create_foreign_key("fk_contacts_org", "organizations", ["organization_id"], ["id"])
+        batch_op.create_foreign_key("fk_contacts_org", "organizations", ["organization_id"], ["id"], ondelete="CASCADE")
         batch_op.drop_index("ix_contacts_email")
         batch_op.create_index("ix_contacts_organization_id", ["organization_id"])
         batch_op.create_index("uq_contacts_org_email", ["organization_id", "email"], unique=True)
@@ -38,7 +38,7 @@ def upgrade() -> None:
     # ── IntentSignal ─────────────────────────────────────────────────────
     with op.batch_alter_table("intent_signals") as batch_op:
         batch_op.add_column(sa.Column("organization_id", sa.String(36), nullable=False))
-        batch_op.create_foreign_key("fk_intent_signals_org", "organizations", ["organization_id"], ["id"])
+        batch_op.create_foreign_key("fk_intent_signals_org", "organizations", ["organization_id"], ["id"], ondelete="CASCADE")
         batch_op.drop_index("ix_intent_signals_company_id")
         batch_op.drop_index("ix_intent_signals_company_type_observed")
         batch_op.create_index("ix_intent_signals_organization_id", ["organization_id"])
@@ -50,14 +50,14 @@ def upgrade() -> None:
     # ── OutreachMessage ──────────────────────────────────────────────────
     with op.batch_alter_table("outreach_messages") as batch_op:
         batch_op.add_column(sa.Column("organization_id", sa.String(36), nullable=False))
-        batch_op.create_foreign_key("fk_outreach_messages_org", "organizations", ["organization_id"], ["id"])
+        batch_op.create_foreign_key("fk_outreach_messages_org", "organizations", ["organization_id"], ["id"], ondelete="CASCADE")
         batch_op.create_index("ix_outreach_messages_organization_id", ["organization_id"])
         batch_op.create_index("ix_outreach_messages_org_company", ["organization_id", "company_id"])
 
     # ── EvidenceRecord ───────────────────────────────────────────────────
     with op.batch_alter_table("evidence_records") as batch_op:
         batch_op.add_column(sa.Column("organization_id", sa.String(36), nullable=False))
-        batch_op.create_foreign_key("fk_evidence_records_org", "organizations", ["organization_id"], ["id"])
+        batch_op.create_foreign_key("fk_evidence_records_org", "organizations", ["organization_id"], ["id"], ondelete="CASCADE")
         batch_op.create_index("ix_evidence_organization_id", ["organization_id"])
         batch_op.create_index("ix_evidence_org_target", ["organization_id", "target_type", "target_id"])
         batch_op.create_index("ix_evidence_org_source", ["organization_id", "source_type", "source_id"])
@@ -65,14 +65,14 @@ def upgrade() -> None:
     # ── AgentRun ─────────────────────────────────────────────────────────
     with op.batch_alter_table("agent_runs") as batch_op:
         batch_op.add_column(sa.Column("organization_id", sa.String(36), nullable=False))
-        batch_op.create_foreign_key("fk_agent_runs_org", "organizations", ["organization_id"], ["id"])
+        batch_op.create_foreign_key("fk_agent_runs_org", "organizations", ["organization_id"], ["id"], ondelete="CASCADE")
         batch_op.create_index("ix_agent_runs_organization_id", ["organization_id"])
         batch_op.create_index("ix_agent_runs_org_agent_status", ["organization_id", "agent_name", "status"])
 
     # ── IntelligenceScore ────────────────────────────────────────────────
     with op.batch_alter_table("intelligence_scores") as batch_op:
         batch_op.add_column(sa.Column("organization_id", sa.String(36), nullable=False))
-        batch_op.create_foreign_key("fk_intelligence_scores_org", "organizations", ["organization_id"], ["id"])
+        batch_op.create_foreign_key("fk_intelligence_scores_org", "organizations", ["organization_id"], ["id"], ondelete="CASCADE")
         batch_op.drop_index("ix_intelligence_scores_company_total")
         batch_op.create_index("ix_intelligence_scores_organization_id", ["organization_id"])
         batch_op.create_index(
@@ -83,7 +83,7 @@ def upgrade() -> None:
     # ── Job ──────────────────────────────────────────────────────────────
     with op.batch_alter_table("jobs") as batch_op:
         batch_op.add_column(sa.Column("organization_id", sa.String(36), nullable=True))
-        batch_op.create_foreign_key("fk_jobs_org", "organizations", ["organization_id"], ["id"])
+        batch_op.create_foreign_key("fk_jobs_org", "organizations", ["organization_id"], ["id"], ondelete="SET NULL")
         batch_op.create_index("ix_jobs_organization_id", ["organization_id"])
 
 

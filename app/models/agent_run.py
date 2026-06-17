@@ -41,7 +41,7 @@ class AgentRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     organization_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
+        ForeignKey("organizations.id", ondelete="CASCADE", name="fk_agent_runs_org"),
         nullable=False,
     )
     company_id: Mapped[str | None] = mapped_column(

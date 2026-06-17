@@ -125,7 +125,7 @@ class EvidenceRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     organization_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
+        ForeignKey("organizations.id", ondelete="CASCADE", name="fk_evidence_records_org"),
         nullable=False,
     )
     agent_run_id: Mapped[str | None] = mapped_column(
