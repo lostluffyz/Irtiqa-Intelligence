@@ -13,29 +13,32 @@ class OutreachMessageService(BaseService[OutreachMessage, OutreachMessageReposit
     model = OutreachMessage
     repository = OutreachMessageRepository
 
-    def list_by_company(self, company_id: str, *, limit: int = 100) -> Sequence[OutreachMessage]:
+    def create(self, organization_id: str, **values: Any) -> OutreachMessage:
+        return super().create(organization_id=organization_id, **values)
+
+    def list_by_company(self, company_id: str, *, organization_id: str, limit: int = 100) -> Sequence[OutreachMessage]:
         self._validate_identifier(company_id, field_name="company_id")
         self._validate_limit(limit)
 
         def operation(session: Session) -> Sequence[OutreachMessage]:
-            return self._repository(session).list_by_company(company_id, limit=limit)
+            return self._repository(session).list_by_company(company_id, organization_id=organization_id, limit=limit)
 
         return self._run_in_transaction("list_by_company", operation)
 
-    def list_by_contact(self, contact_id: str, *, limit: int = 100) -> Sequence[OutreachMessage]:
+    def list_by_contact(self, contact_id: str, *, organization_id: str, limit: int = 100) -> Sequence[OutreachMessage]:
         self._validate_identifier(contact_id, field_name="contact_id")
         self._validate_limit(limit)
 
         def operation(session: Session) -> Sequence[OutreachMessage]:
-            return self._repository(session).list_by_contact(contact_id, limit=limit)
+            return self._repository(session).list_by_contact(contact_id, organization_id=organization_id, limit=limit)
 
         return self._run_in_transaction("list_by_contact", operation)
 
-    def list_by_status(self, status: str, *, limit: int = 100) -> Sequence[OutreachMessage]:
+    def list_by_status(self, status: str, *, organization_id: str, limit: int = 100) -> Sequence[OutreachMessage]:
         self._validate_identifier(status, field_name="status")
         self._validate_limit(limit)
 
         def operation(session: Session) -> Sequence[OutreachMessage]:
-            return self._repository(session).list_by_status(status, limit=limit)
+            return self._repository(session).list_by_status(status, organization_id=organization_id, limit=limit)
 
         return self._run_in_transaction("list_by_status", operation)

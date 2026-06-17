@@ -27,7 +27,7 @@ class IntentSignal(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "confidence >= 0.0 AND confidence <= 1.0",
             name="confidence_range",
         ),
-        Index("ix_intent_signals_company_id", "company_id"),
+        Index("ix_intent_signals_organization_id", "organization_id"),
         Index("ix_intent_signals_contact_id", "contact_id"),
         Index("ix_intent_signals_website_id", "website_id"),
         Index("ix_intent_signals_technology_id", "technology_id"),
@@ -36,9 +36,14 @@ class IntentSignal(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_intent_signals_strength", "strength"),
         Index("ix_intent_signals_confidence", "confidence"),
         Index("ix_intent_signals_observed_at", "observed_at"),
-        Index("ix_intent_signals_company_type_observed", "company_id", "signal_type", "observed_at"),
+        Index("ix_intent_signals_org_company_type_observed", "organization_id", "company_id", "signal_type", "observed_at"),
     )
 
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE", name="fk_intent_signals_org"),
+        nullable=False,
+    )
     company_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("companies.id", ondelete="CASCADE"),

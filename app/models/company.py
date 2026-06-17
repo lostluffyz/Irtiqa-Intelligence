@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, Index, String, Text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -24,13 +24,19 @@ class Company(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "status IN ('active', 'needs_review', 'archived')",
             name="status_allowed",
         ),
-        Index("ix_companies_domain", "domain", unique=True),
         Index("ix_companies_name", "name"),
         Index("ix_companies_industry", "industry"),
         Index("ix_companies_status", "status"),
         Index("ix_companies_created_at", "created_at"),
+        Index("ix_companies_organization_id", "organization_id"),
+        Index("uq_companies_org_domain", "organization_id", "domain", unique=True),
     )
 
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE", name="fk_companies_org"),
+        nullable=False,
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     domain: Mapped[str] = mapped_column(String(255), nullable=False)
     industry: Mapped[str | None] = mapped_column(String(150))

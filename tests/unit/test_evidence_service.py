@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from uuid import uuid4
+
+from app.models.organization import Organization
 
 import pytest
 from sqlalchemy import Engine
@@ -18,6 +21,9 @@ from app.schemas.evidence import EvidenceItem
 from app.services.evidence_service import EvidenceService
 
 
+TEST_ORG_ID = str(uuid4())
+
+
 @pytest.fixture()
 def _session_override(
     migrated_engine: Engine,
@@ -31,6 +37,11 @@ def _session_override(
         class_=Session,
     )
     monkeypatch.setattr(database_session, "SessionLocal", factory)
+    # Create a test org so FK constraints work
+    with factory() as session:
+        org = Organization(id=TEST_ORG_ID, name="Evidence Test Org", slug="evidence-test-org", status="active")
+        session.add(org)
+        session.commit()
     yield factory
 
 
@@ -53,6 +64,7 @@ def _evidence_item(**overrides: str | float | None) -> EvidenceItem:
 def test_record_evidence_creates_record(_session_override: object) -> None:
     service = EvidenceService()
     record = service.record_evidence(
+        organization_id=TEST_ORG_ID,
         source_type=SOURCE_TYPE_AGENT_RUN,
         source_id="a" * 36,
         source_detail="Direct record test",
@@ -73,6 +85,7 @@ def test_record_evidence_validates_invalid_evidence_type(_session_override: obje
     service = EvidenceService()
     with pytest.raises(ValidationError):
         service.record_evidence(
+            organization_id=TEST_ORG_ID,
             source_type=SOURCE_TYPE_AGENT_RUN,
             source_id="a" * 36,
             evidence_type="invalid_type",
@@ -88,6 +101,7 @@ def test_record_evidence_validates_invalid_confidence(_session_override: object)
     service = EvidenceService()
     with pytest.raises(ValidationError):
         service.record_evidence(
+            organization_id=TEST_ORG_ID,
             source_type=SOURCE_TYPE_AGENT_RUN,
             source_id="a" * 36,
             evidence_type=EVIDENCE_TYPE_COMPUTED_METRIC,
@@ -107,6 +121,7 @@ def test_record_evidence_batch_creates_multiple(_session_override: object) -> No
     ]
     records = service.record_evidence_batch(
         items=items,
+        organization_id=TEST_ORG_ID,
         agent_run_id=None,
         company_id="d" * 36,
         contact_id="e" * 36,
@@ -119,7 +134,7 @@ def test_record_evidence_batch_creates_multiple(_session_override: object) -> No
 
 def test_record_evidence_batch_returns_empty_for_empty_input() -> None:
     service = EvidenceService()
-    records = service.record_evidence_batch(items=[])
+    records = service.record_evidence_batch(items=[], organization_id=TEST_ORG_ID)
     assert records == []
 
 
@@ -129,11 +144,11 @@ def test_record_evidence_batch_deduplicates_across_batches(_session_override: ob
         _evidence_item(evidence_value="unique dedup test", target_id="t_dedup", confidence=0.9),
     ]
     # First batch
-    first = service.record_evidence_batch(items=items, agent_run_id=None)
+    first = service.record_evidence_batch(items=items, organization_id=TEST_ORG_ID, agent_run_id=None)
     assert len(first) == 1
 
     # Second batch with same content — should be skipped
-    second = service.record_evidence_batch(items=items, agent_run_id=None)
+    second = service.record_evidence_batch(items=items, organization_id=TEST_ORG_ID, agent_run_id=None)
     assert len(second) == 0
 
 
@@ -143,5 +158,5 @@ def test_record_evidence_batch_accepts_same_hash_different_target(_session_overr
         _evidence_item(evidence_value="same content", target_id="target_a", confidence=0.9),
         _evidence_item(evidence_value="same content", target_id="target_b", confidence=0.9),
     ]
-    records = service.record_evidence_batch(items=items, agent_run_id=None)
+    records = service.record_evidence_batch(items=items, organization_id=TEST_ORG_ID, agent_run_id=None)
     assert len(records) == 2

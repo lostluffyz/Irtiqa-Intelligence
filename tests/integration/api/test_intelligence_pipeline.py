@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,11 +11,14 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.agents.result import AGENT_STATUS_SUCCEEDED, AgentResult
+from app.api.dependencies import get_current_organization
 from app.core.config import AuthSettings, DatabaseSettings, LoggingSettings, Settings
+from app.core.tenant import TenantContext
 from app.database import session as database_session
 from app.jobs.runner import JobRunner
 from app.main import create_app
 from app.models.company import Company
+from app.models.organization import Organization
 from app.models.website import Website
 from app.services.job_service import JobService
 from app.workflows.context import WorkflowContext
@@ -39,17 +43,34 @@ def api_session_factory(
 
 
 @pytest.fixture()
-def client(api_session_factory: sessionmaker[Session]) -> Iterator[TestClient]:
+def test_org(api_session_factory: sessionmaker[Session]) -> Iterator[Organization]:
+    with api_session_factory() as session:
+        org = Organization(id=str(uuid4()), name="Pipeline Test Org", slug="pipeline-test", status="active")
+        session.add(org)
+        session.commit()
+        yield org
+
+
+@pytest.fixture()
+def client(api_session_factory: sessionmaker[Session], test_org: Organization) -> Iterator[TestClient]:
     app = create_app(_test_settings(), configure_logging_on_startup=False)
+    app.dependency_overrides[get_current_organization] = lambda: TenantContext(
+        organization_id=test_org.id,
+        user_id=str(uuid4()),
+        role="owner",
+        is_api_key=False,
+    )
     with TestClient(app) as test_client:
         yield test_client
+    app.dependency_overrides.pop(get_current_organization, None)
 
 
-def _seed_company_via_db(session: Session) -> str:
+def _seed_company_via_db(session: Session, org_id: str) -> str:
     from datetime import datetime, timezone
 
     now = datetime.now(timezone.utc)
     company = Company(
+        organization_id=org_id,
         name="Pipeline Job Test Co",
         domain="pipeline-job-test.example",
         industry="software",
@@ -57,17 +78,23 @@ def _seed_company_via_db(session: Session) -> str:
         status="active",
     )
     session.add(company)
-    session.flush()
+    session.commit()
+    return company.id
+
+
+def _seed_website_via_db(session: Session, company_id: str) -> str:
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
     website = Website(
-        company_id=company.id,
+        company_id=company_id,
         url="https://pipeline-job-test.example",
         normalized_url="https://pipeline-job-test.example/",
         page_type="homepage",
-        last_scraped_at=now,
     )
     session.add(website)
     session.commit()
-    return company.id
+    return website.id
 
 
 def _seed_company(client: TestClient) -> str:
@@ -77,6 +104,7 @@ def _seed_company(client: TestClient) -> str:
             "name": "Pipeline Test Co",
             "domain": "pipeline-test.example",
             "industry": "software",
+            "company_size": "11-50",
             "status": "active",
         },
     )
@@ -100,6 +128,7 @@ def _seed_website(client: TestClient, company_id: str) -> str:
 
 def test_pipeline_through_job_system(
     api_session_factory: sessionmaker[Session],
+    test_org: Organization,
 ) -> None:
     """Execute the real IntelligencePipelineWorkflow through the real
     WorkflowRunner, mocking only the 5 agent execute() methods.
@@ -112,7 +141,7 @@ def test_pipeline_through_job_system(
     """
     # ── Seed database ───────────────────────────────────────────────────
     session = api_session_factory()
-    company_id = _seed_company_via_db(session)
+    company_id = _seed_company_via_db(session, org_id=test_org.id)
     session.close()
 
     # ── Mock only the 5 agent execute() calls ───────────────────────────
@@ -143,7 +172,6 @@ def test_pipeline_through_job_system(
         p.start()
 
     try:
-        # ── Real WorkflowRunner with real workflow, real registry ───────
         from app.services.company_service import CompanyService
         from app.workflows.runner import WorkflowRunner
 
@@ -160,24 +188,20 @@ def test_pipeline_through_job_system(
         context = WorkflowContext(
             workflow_name="intelligence_pipeline",
             company_id=company_id,
+            organization_id=test_org.id,
         )
         result = runner.run(context)
 
-        # ── Verify ──────────────────────────────────────────────────────
         from app.workflows.states import WorkflowStatus as WfStatus
 
         assert result.status == WfStatus.SUCCEEDED, f"Pipeline failed: {result.error}"
         assert result.workflow_name == "intelligence_pipeline"
         assert len(result.agent_run_ids) == 5
-
-        # All 5 output types present
         assert "websites" in result.output_ids
         assert "technologies" in result.output_ids
         assert "intent_signals" in result.output_ids
         assert "intelligence_scores" in result.output_ids
         assert "outreach_messages" in result.output_ids
-
-        # Each agent executed exactly once
         assert async_mock.call_count == 5
 
     finally:
@@ -191,30 +215,23 @@ def test_pipeline_end_to_end(client: TestClient) -> None:
     _seed_website(client, company_id)
 
     mock_result = _make_result()
-
     async_mock = AsyncMock(return_value=mock_result)
 
     with patch(
-        "app.agents.deep_scraper.DeepScraperAgent.execute",
-        async_mock,
+        "app.agents.deep_scraper.DeepScraperAgent.execute", async_mock,
     ), patch(
-        "app.agents.technographic.TechnographicAgent.execute",
-        async_mock,
+        "app.agents.technographic.TechnographicAgent.execute", async_mock,
     ), patch(
-        "app.agents.intent_signal.IntentSignalAgent.execute",
-        async_mock,
+        "app.agents.intent_signal.IntentSignalAgent.execute", async_mock,
     ), patch(
-        "app.agents.intelligence_scoring.IntelligenceScoringAgent.execute",
-        async_mock,
+        "app.agents.intelligence_scoring.IntelligenceScoringAgent.execute", async_mock,
     ), patch(
-        "app.agents.personalization.PersonalizationAgent.execute",
-        async_mock,
+        "app.agents.personalization.PersonalizationAgent.execute", async_mock,
     ):
         response = client.post(
             "/intelligence/pipeline",
             json={"company_id": company_id},
         )
-
     assert response.status_code == 202
     data = response.json()
     assert data["status"] == "scheduled"
@@ -231,27 +248,21 @@ def test_pipeline_status_endpoint(client: TestClient) -> None:
     async_mock = AsyncMock(return_value=mock_result)
 
     with patch(
-        "app.agents.deep_scraper.DeepScraperAgent.execute",
-        async_mock,
+        "app.agents.deep_scraper.DeepScraperAgent.execute", async_mock,
     ), patch(
-        "app.agents.technographic.TechnographicAgent.execute",
-        async_mock,
+        "app.agents.technographic.TechnographicAgent.execute", async_mock,
     ), patch(
-        "app.agents.intent_signal.IntentSignalAgent.execute",
-        async_mock,
+        "app.agents.intent_signal.IntentSignalAgent.execute", async_mock,
     ), patch(
-        "app.agents.intelligence_scoring.IntelligenceScoringAgent.execute",
-        async_mock,
+        "app.agents.intelligence_scoring.IntelligenceScoringAgent.execute", async_mock,
     ), patch(
-        "app.agents.personalization.PersonalizationAgent.execute",
-        async_mock,
+        "app.agents.personalization.PersonalizationAgent.execute", async_mock,
     ):
         trigger = client.post(
             "/intelligence/pipeline",
             json={"company_id": company_id},
         )
     job_id = trigger.json()["job_id"]
-
     response = client.get(f"/intelligence/pipeline/{job_id}")
     assert response.status_code == 200
     data = response.json()
@@ -273,7 +284,6 @@ def test_pipeline_invalid_company(client: TestClient) -> None:
         json={"company_id": "00000000-0000-0000-0000-000000000000"},
     )
     assert response.status_code == 202
-
     job_id = response.json()["job_id"]
     status_resp = client.get(f"/intelligence/pipeline/{job_id}")
     assert status_resp.status_code == 200

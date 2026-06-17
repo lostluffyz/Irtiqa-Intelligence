@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import inspect
+
+from app.models.organization import Organization
 
 from app.models.evidence_record import (
     EVIDENCE_TYPE_COMPUTED_METRIC,
@@ -22,6 +25,7 @@ from app.models.evidence_record import (
 def test_evidence_model_columns() -> None:
     record = EvidenceRecord(
         id="10000000-0000-0000-0000-000000000001",
+        organization_id="70000000-0000-0000-0000-000000000007",
         source_type=SOURCE_TYPE_AGENT_RUN,
         source_id="20000000-0000-0000-0000-000000000002",
         source_detail="Test evidence detail",
@@ -57,6 +61,7 @@ def test_evidence_model_columns() -> None:
 def test_evidence_model_defaults() -> None:
     record = EvidenceRecord(
         id="60000000-0000-0000-0000-000000000006",
+        organization_id="80000000-0000-0000-0000-000000000008",
         source_type=SOURCE_TYPE_AGENT_RUN,
         source_id="a" * 36,
         evidence_type=EVIDENCE_TYPE_COMPUTED_METRIC,
@@ -81,7 +86,11 @@ def test_evidence_model_defaults() -> None:
 
 
 def test_evidence_model_uuid_generated(session) -> None:
+    org_id = str(uuid4())
+    session.add(Organization(id=org_id, name="Test Org", slug="test-org-evid", status="active"))
+    session.flush()
     r1 = EvidenceRecord(
+        organization_id=org_id,
         source_type=SOURCE_TYPE_AGENT_RUN,
         source_id="a" * 36,
         evidence_type=EVIDENCE_TYPE_COMPUTED_METRIC,
@@ -94,6 +103,7 @@ def test_evidence_model_uuid_generated(session) -> None:
         updated_at=datetime.now(timezone.utc),
     )
     r2 = EvidenceRecord(
+        organization_id=org_id,
         source_type=SOURCE_TYPE_AGENT_RUN,
         source_id="a" * 36,
         evidence_type=EVIDENCE_TYPE_COMPUTED_METRIC,
@@ -129,7 +139,11 @@ def test_evidence_model_indexes() -> None:
 
 
 def test_evidence_model_associates_with_session(session) -> None:
+    org_id = str(uuid4())
+    session.add(Organization(id=org_id, name="Session Test Org", slug="session-test-evid", status="active"))
+    session.flush()
     record = EvidenceRecord(
+        organization_id=org_id,
         source_type=SOURCE_TYPE_AGENT_RUN,
         source_id="a" * 36,
         evidence_type=EVIDENCE_TYPE_COMPUTED_METRIC,

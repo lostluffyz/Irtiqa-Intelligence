@@ -36,6 +36,7 @@ class JobService(BaseService[Job, JobRepository]):
         payload = {
             "company_id": context.company_id,
             "contact_id": context.contact_id,
+            "organization_id": context.organization_id,
             "workflow_name": context.workflow_name,
             "correlation_id": context.correlation_id,
             "options": dict(context.options),
@@ -45,6 +46,7 @@ class JobService(BaseService[Job, JobRepository]):
         effective_scheduled_at = scheduled_at or now
 
         return self.create(
+            organization_id=context.organization_id,
             job_type="agent",
             target_name=name,
             payload=json.dumps(payload),
@@ -70,6 +72,7 @@ class JobService(BaseService[Job, JobRepository]):
         payload = {
             "company_id": context.company_id,
             "contact_id": context.contact_id,
+            "organization_id": context.organization_id,
             "correlation_id": context.correlation_id,
             "requested_by": context.requested_by,
             "options": dict(context.options),
@@ -79,6 +82,7 @@ class JobService(BaseService[Job, JobRepository]):
         effective_scheduled_at = scheduled_at or now
 
         return self.create(
+            organization_id=context.organization_id,
             job_type="workflow",
             target_name=name,
             payload=json.dumps(payload),
@@ -93,6 +97,7 @@ class JobService(BaseService[Job, JobRepository]):
     def list_jobs(
         self,
         *,
+        organization_id: str,
         status: str | None = None,
         target_name: str | None = None,
         limit: int = 50,
@@ -105,6 +110,8 @@ class JobService(BaseService[Job, JobRepository]):
             repository = self._repository(session)
             statement = select(repository.model)
 
+            statement = repository._apply_tenant_filter(statement, organization_id)
+
             if status:
                 statement = statement.where(repository.model.status == status)
             if target_name:
@@ -115,11 +122,12 @@ class JobService(BaseService[Job, JobRepository]):
 
         return self._run_in_transaction("list_jobs", operation)
 
-    def cancel_job(self, job_id: str) -> Job:
+    def cancel_job(self, job_id: str, *, organization_id: str) -> Job:
         self._validate_identifier(job_id, field_name="job_id")
 
         def operation(session: Session) -> Job:
-            job = self._repository(session).get(job_id)
+            repository = self._repository(session)
+            job = repository.get(job_id)
             if job is None:
                 raise EntityNotFoundError(
                     details={

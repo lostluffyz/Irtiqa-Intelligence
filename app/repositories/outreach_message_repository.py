@@ -11,24 +11,25 @@ from app.repositories.base import BaseRepository
 class OutreachMessageRepository(BaseRepository[OutreachMessage]):
     model = OutreachMessage
 
-    def list_by_company(self, company_id: str, *, limit: int = 100) -> Sequence[OutreachMessage]:
+    def list_by_company(self, company_id: str, *, organization_id: str, limit: int = 100) -> Sequence[OutreachMessage]:
         statement = (
             select(OutreachMessage)
             .where(OutreachMessage.company_id == company_id)
             .order_by(desc(OutreachMessage.generated_at))
-            .limit(limit)
         )
-        return self.scalars(statement)
+        statement = self._apply_tenant_filter(statement, organization_id)
+        return self.scalars(statement.limit(limit))
 
-    def list_by_contact(self, contact_id: str, *, limit: int = 100) -> Sequence[OutreachMessage]:
+    def list_by_contact(self, contact_id: str, *, organization_id: str, limit: int = 100) -> Sequence[OutreachMessage]:
         statement = (
             select(OutreachMessage)
             .where(OutreachMessage.contact_id == contact_id)
             .order_by(desc(OutreachMessage.generated_at))
-            .limit(limit)
         )
-        return self.scalars(statement)
+        statement = self._apply_tenant_filter(statement, organization_id)
+        return self.scalars(statement.limit(limit))
 
-    def list_by_status(self, status: str, *, limit: int = 100) -> Sequence[OutreachMessage]:
-        statement = select(OutreachMessage).where(OutreachMessage.status == status).limit(limit)
-        return self.scalars(statement)
+    def list_by_status(self, status: str, *, organization_id: str, limit: int = 100) -> Sequence[OutreachMessage]:
+        statement = select(OutreachMessage).where(OutreachMessage.status == status)
+        statement = self._apply_tenant_filter(statement, organization_id)
+        return self.scalars(statement.limit(limit))

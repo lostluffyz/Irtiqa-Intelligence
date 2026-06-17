@@ -106,6 +106,9 @@ class EvidenceRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_evidence_target_type", "target_type"),
         Index("ix_evidence_created_at", "created_at"),
         Index("ix_evidence_source_location", "source_location_type", "source_location_value"),
+        Index("ix_evidence_organization_id", "organization_id"),
+        Index("ix_evidence_org_target", "organization_id", "target_type", "target_id"),
+        Index("ix_evidence_org_source", "organization_id", "source_type", "source_id"),
     )
 
     source_type: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -120,6 +123,11 @@ class EvidenceRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[str] = mapped_column(String(36), nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE", name="fk_evidence_records_org"),
+        nullable=False,
+    )
     agent_run_id: Mapped[str | None] = mapped_column(
         String(36),
         ForeignKey("agent_runs.id", ondelete="SET NULL"),

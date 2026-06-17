@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import pytest
 
+from uuid import uuid4
+
+from app.models.organization import Organization
+
 from app.models.evidence_record import (
     TARGET_TYPE_INTELLIGENCE_SCORE,
 )
@@ -25,8 +29,12 @@ def test_score_refresh_creates_evidence(session) -> None:
     from datetime import datetime, timezone
 
     now = datetime.now(timezone.utc)
+    org_id = str(uuid4())
+    session.add(Organization(id=org_id, name="Evidence Refresh Org", slug="evidence-refresh", status="active", created_at=now, updated_at=now))
+    session.flush()
 
     company = Company(
+        organization_id=org_id,
         name="Evidence Test Co",
         domain="evidence-test.example",
         industry="software",
@@ -37,6 +45,7 @@ def test_score_refresh_creates_evidence(session) -> None:
     session.flush()
 
     contact = Contact(
+        organization_id=org_id,
         company_id=company.id,
         full_name="Evidence Contact",
         email="evidence@test.example",
@@ -61,6 +70,7 @@ def test_score_refresh_creates_evidence(session) -> None:
     session.flush()
     website_id = website.id
     agent_run_ref = AgentRun(
+        organization_id=org_id,
         company_id=company.id,
         contact_id=contact.id,
         agent_name="test_setup",
@@ -90,6 +100,7 @@ def test_score_refresh_creates_evidence(session) -> None:
     session.flush()
 
     signal = IntentSignal(
+        organization_id=org_id,
         company_id=company.id,
         contact_id=contact.id,
         website_id=website_id,
@@ -152,6 +163,7 @@ def test_score_refresh_creates_evidence(session) -> None:
             workflow_name="score_refresh",
             company_id=company.id,
             contact_id=contact.id,
+            organization_id=org_id,
             options={"intent_lookback_days": 365},
         )
         result = workflow.execute(context)
@@ -163,7 +175,7 @@ def test_score_refresh_creates_evidence(session) -> None:
         # Verify evidence was created for the score
         evidence_service = EvidenceService()
         evidence_records = evidence_service.get_target_evidence(
-            TARGET_TYPE_INTELLIGENCE_SCORE, score_id,
+            TARGET_TYPE_INTELLIGENCE_SCORE, score_id, organization_id=org_id,
         )
         assert len(evidence_records) >= 2, (
             f"Expected at least 2 evidence records (technology + signal), "

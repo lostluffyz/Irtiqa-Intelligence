@@ -4,6 +4,7 @@ import os
 from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from alembic import command
@@ -29,6 +30,7 @@ from app.models.company import Company
 from app.models.contact import Contact
 from app.models.intent_signal import IntentSignal
 from app.models.intelligence_score import IntelligenceScore
+from app.models.organization import Organization
 from app.models.outreach_message import OutreachMessage
 from app.models.technology import Technology
 from app.models.website import Website
@@ -90,8 +92,21 @@ def utc_now() -> datetime:
 
 
 @pytest.fixture()
-def company() -> Company:
+def organization() -> Organization:
+    return Organization(
+        id=str(uuid4()),
+        name="Test Organization",
+        slug="test-org",
+        status="active",
+        created_at=utc_now(),
+        updated_at=utc_now(),
+    )
+
+
+@pytest.fixture()
+def company(organization: Organization) -> Company:
     return Company(
+        organization_id=organization.id,
         name="Irtiqa Test Company",
         domain="irtiqa-test.example",
         industry="software",
@@ -102,8 +117,9 @@ def company() -> Company:
 
 
 @pytest.fixture()
-def contact(company: Company) -> Contact:
+def contact(company: Company, organization: Organization) -> Contact:
     return Contact(
+        organization_id=organization.id,
         company=company,
         first_name="Asha",
         last_name="Rao",
@@ -129,8 +145,9 @@ def website(company: Company) -> Website:
 
 
 @pytest.fixture()
-def agent_run(company: Company, contact: Contact) -> AgentRun:
+def agent_run(company: Company, contact: Contact, organization: Organization) -> AgentRun:
     return AgentRun(
+        organization_id=organization.id,
         company=company,
         contact=contact,
         agent_name="test_agent",
@@ -167,8 +184,10 @@ def intent_signal(
     website: Website,
     technology: Technology,
     agent_run: AgentRun,
+    organization: Organization,
 ) -> IntentSignal:
     return IntentSignal(
+        organization_id=organization.id,
         company=company,
         contact=contact,
         website=website,
@@ -190,8 +209,10 @@ def intelligence_score(
     contact: Contact,
     technology: Technology,
     agent_run: AgentRun,
+    organization: Organization,
 ) -> IntelligenceScore:
     return IntelligenceScore(
+        organization_id=organization.id,
         company=company,
         contact=contact,
         technology=technology,
@@ -214,8 +235,10 @@ def outreach_message(
     contact: Contact,
     intelligence_score: IntelligenceScore,
     agent_run: AgentRun,
+    organization: Organization,
 ) -> OutreachMessage:
     return OutreachMessage(
+        organization_id=organization.id,
         company=company,
         contact=contact,
         intelligence_score=intelligence_score,

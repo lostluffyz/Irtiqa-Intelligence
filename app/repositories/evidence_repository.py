@@ -25,6 +25,7 @@ class EvidenceRepository(BaseRepository[EvidenceRecord]):
         target_type: str,
         target_id: str,
         *,
+        organization_id: str,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[EvidenceRecord]:
@@ -48,6 +49,7 @@ class EvidenceRepository(BaseRepository[EvidenceRecord]):
             .offset(offset)
             .limit(limit)
         )
+        statement = self._apply_tenant_filter(statement, organization_id)
         return self.scalars(statement)
 
     def list_by_source(
@@ -55,6 +57,7 @@ class EvidenceRepository(BaseRepository[EvidenceRecord]):
         source_type: str,
         source_id: str,
         *,
+        organization_id: str,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[EvidenceRecord]:
@@ -78,12 +81,14 @@ class EvidenceRepository(BaseRepository[EvidenceRecord]):
             .offset(offset)
             .limit(limit)
         )
+        statement = self._apply_tenant_filter(statement, organization_id)
         return self.scalars(statement)
 
     def list_by_agent_run(
         self,
         agent_run_id: str,
         *,
+        organization_id: str,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[EvidenceRecord]:
@@ -103,12 +108,14 @@ class EvidenceRepository(BaseRepository[EvidenceRecord]):
             .offset(offset)
             .limit(limit)
         )
+        statement = self._apply_tenant_filter(statement, organization_id)
         return self.scalars(statement)
 
     def list_by_company(
         self,
         company_id: str,
         *,
+        organization_id: str,
         target_type: str | None = None,
         limit: int = 100,
         offset: int = 0,
@@ -129,12 +136,14 @@ class EvidenceRepository(BaseRepository[EvidenceRecord]):
         if target_type is not None:
             statement = statement.where(EvidenceRecord.target_type == target_type)
         statement = statement.order_by(EvidenceRecord.created_at).offset(offset).limit(limit)
+        statement = self._apply_tenant_filter(statement, organization_id)
         return self.scalars(statement)
 
     def list_by_entity_type(
         self,
         target_type: str,
         *,
+        organization_id: str,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[EvidenceRecord]:
@@ -154,9 +163,10 @@ class EvidenceRepository(BaseRepository[EvidenceRecord]):
             .offset(offset)
             .limit(limit)
         )
+        statement = self._apply_tenant_filter(statement, organization_id)
         return self.scalars(statement)
 
-    def count_by_target(self, target_type: str, target_id: str) -> int:
+    def count_by_target(self, target_type: str, target_id: str, *, organization_id: str) -> int:
         self.logger.debug(
             "Counting evidence by target",
             extra={
@@ -173,9 +183,10 @@ class EvidenceRepository(BaseRepository[EvidenceRecord]):
                 EvidenceRecord.target_id == target_id,
             )
         )
+        statement = self._apply_tenant_filter(statement, organization_id)
         return self.session.scalar(statement) or 0
 
-    def delete_by_target(self, target_type: str, target_id: str) -> int:
+    def delete_by_target(self, target_type: str, target_id: str, *, organization_id: str) -> int:
         self.logger.debug(
             "Deleting evidence by target",
             extra={
@@ -191,6 +202,7 @@ class EvidenceRepository(BaseRepository[EvidenceRecord]):
                 EvidenceRecord.target_id == target_id,
             )
         )
+        statement = self._apply_tenant_filter(statement, organization_id)
         entities = self.session.scalars(statement).all()
         count = 0
         for entity in entities:

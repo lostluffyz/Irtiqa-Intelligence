@@ -28,6 +28,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
     def record_evidence(
         self,
         *,
+        organization_id: str,
         source_type: str,
         source_id: str,
         source_detail: str | None = None,
@@ -69,6 +70,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
                 agent_run_id=agent_run_id,
                 company_id=company_id,
                 contact_id=contact_id,
+                organization_id=organization_id,
             )
             return repository.add(entity)
 
@@ -78,6 +80,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
         self,
         items: list[EvidenceItem],
         *,
+        organization_id: str,
         agent_run_id: str | None = None,
         company_id: str | None = None,
         contact_id: str | None = None,
@@ -101,11 +104,11 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
 
                 # Dedup: skip if same hash + target already exists
                 existing_count = repository.count_by_target(
-                    item["target_type"], item["target_id"],
+                    item["target_type"], item["target_id"], organization_id=organization_id,
                 )
                 if existing_count > 0:
                     existing = repository.list_by_target(
-                        item["target_type"], item["target_id"], limit=500,
+                        item["target_type"], item["target_id"], organization_id=organization_id, limit=500,
                     )
                     if any(e.evidence_hash == evidence_hash for e in existing):
                         self.logger.debug(
@@ -130,6 +133,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
                     agent_run_id=agent_run_id,
                     company_id=company_id,
                     contact_id=contact_id,
+                    organization_id=organization_id,
                 )
                 entities.append(entity)
 
@@ -148,6 +152,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
         target_type: str,
         target_id: str,
         *,
+        organization_id: str,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[EvidenceRecord]:
@@ -158,7 +163,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
 
         def operation(session: Session) -> Sequence[EvidenceRecord]:
             return self._repository(session).list_by_target(
-                target_type, target_id, limit=limit, offset=offset,
+                target_type, target_id, organization_id=organization_id, limit=limit, offset=offset,
             )
 
         return self._run_in_transaction("get_target_evidence", operation)
@@ -168,6 +173,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
         source_type: str,
         source_id: str,
         *,
+        organization_id: str,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[EvidenceRecord]:
@@ -178,7 +184,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
 
         def operation(session: Session) -> Sequence[EvidenceRecord]:
             return self._repository(session).list_by_source(
-                source_type, source_id, limit=limit, offset=offset,
+                source_type, source_id, organization_id=organization_id, limit=limit, offset=offset,
             )
 
         return self._run_in_transaction("get_source_targets", operation)
@@ -187,6 +193,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
         self,
         company_id: str,
         *,
+        organization_id: str,
         target_type: str | None = None,
         limit: int = 100,
         offset: int = 0,
@@ -199,7 +206,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
 
         def operation(session: Session) -> Sequence[EvidenceRecord]:
             return self._repository(session).list_by_company(
-                company_id, target_type=target_type, limit=limit, offset=offset,
+                company_id, organization_id=organization_id, target_type=target_type, limit=limit, offset=offset,
             )
 
         return self._run_in_transaction("get_company_evidence", operation)
@@ -208,6 +215,7 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
         self,
         agent_run_id: str,
         *,
+        organization_id: str,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[EvidenceRecord]:
@@ -217,18 +225,18 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
 
         def operation(session: Session) -> Sequence[EvidenceRecord]:
             return self._repository(session).list_by_agent_run(
-                agent_run_id, limit=limit, offset=offset,
+                agent_run_id, organization_id=organization_id, limit=limit, offset=offset,
             )
 
         return self._run_in_transaction("get_agent_run_evidence", operation)
 
-    def get_evidence_summary(self, target_type: str, target_id: str) -> EvidenceSummary:
+    def get_evidence_summary(self, target_type: str, target_id: str, *, organization_id: str) -> EvidenceSummary:
         self._validate_identifier(target_type, field_name="target_type")
         self._validate_identifier(target_id, field_name="target_id")
 
         def operation(session: Session) -> EvidenceSummary:
             repository = self._repository(session)
-            records = repository.list_by_target(target_type, target_id, limit=10000)
+            records = repository.list_by_target(target_type, target_id, organization_id=organization_id, limit=10000)
 
             by_evidence_type: dict[str, int] = {}
             by_relationship: dict[str, int] = {}
@@ -257,12 +265,12 @@ class EvidenceService(BaseService[EvidenceRecord, EvidenceRepository]):
 
     # ── Deletion ───────────────────────────────────────────────────────────
 
-    def delete_target_evidence(self, target_type: str, target_id: str) -> int:
+    def delete_target_evidence(self, target_type: str, target_id: str, *, organization_id: str) -> int:
         self._validate_identifier(target_type, field_name="target_type")
         self._validate_identifier(target_id, field_name="target_id")
 
         def operation(session: Session) -> int:
-            return self._repository(session).delete_by_target(target_type, target_id)
+            return self._repository(session).delete_by_target(target_type, target_id, organization_id=organization_id)
 
         return self._run_in_transaction("delete_target_evidence", operation)
 

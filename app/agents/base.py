@@ -107,6 +107,7 @@ class BaseAgent(ABC):
                     evidence_service = EvidenceService()
                     evidence_service.record_evidence_batch(
                         items=evidence_list,
+                        organization_id=context.organization_id,
                         agent_run_id=agent_run_id,
                         company_id=context.company_id,
                         contact_id=context.contact_id,

@@ -34,8 +34,14 @@ class Job(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_jobs_status_scheduled_at", "status", "scheduled_at"),
         Index("ix_jobs_target_name", "target_name"),
         Index("ix_jobs_agent_run_id", "agent_run_id"),
+        Index("ix_jobs_organization_id", "organization_id"),
     )
 
+    organization_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="SET NULL", name="fk_jobs_org"),
+        nullable=True,
+    )
     job_type: Mapped[str] = mapped_column(String(16), nullable=False)
     target_name: Mapped[str] = mapped_column(String(128), nullable=False)
     payload: Mapped[str] = mapped_column(Text, nullable=False)

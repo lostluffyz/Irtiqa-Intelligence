@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.config import DatabaseSettings
 from app.database.engine import create_database_engine
 from app.models.agent_run import AgentRun
+from app.models.organization import Organization
 from app.models.company import Company
 from app.models.contact import Contact
 from app.models.intent_signal import IntentSignal
@@ -49,14 +50,20 @@ def now() -> datetime:
 
 
 def add_valid_graph(session: Session) -> dict[str, object]:
-    company = Company(name="Constraint Company", domain="constraint.example", status="active")
-    contact = Contact(company=company, full_name="Constraint Contact", status="active")
+    from uuid import uuid4
+    org_id = str(uuid4())
+    org = Organization(id=org_id, name="Constraint Test Org", slug="constraint-test", status="active", created_at=now(), updated_at=now())
+    session.add(org)
+    session.flush()
+    company = Company(organization_id=org_id, name="Constraint Company", domain="constraint.example", status="active")
+    contact = Contact(organization_id=org_id, company=company, full_name="Constraint Contact", status="active")
     website = Website(
         company=company,
         url="https://constraint.example",
         normalized_url="https://constraint.example/",
     )
     agent_run = AgentRun(
+        organization_id=org_id,
         company=company,
         contact=contact,
         agent_name="constraint_agent",
@@ -77,6 +84,7 @@ def add_valid_graph(session: Session) -> dict[str, object]:
         last_detected_at=now(),
     )
     score = IntelligenceScore(
+        organization_id=org_id,
         company=company,
         contact=contact,
         technology=technology,
@@ -94,6 +102,7 @@ def add_valid_graph(session: Session) -> dict[str, object]:
     session.add(score)
     session.commit()
     return {
+        "org_id": org_id,
         "company": company,
         "contact": contact,
         "website": website,
@@ -146,15 +155,16 @@ def test_status_constraints_are_enforced(session: Session) -> None:
 
     expect_integrity_error(
         session,
-        Company(name="Invalid Company", domain="invalid-company.example", status="deleted"),
+        Company(organization_id=graph["org_id"], name="Invalid Company", domain="invalid-company.example", status="deleted"),
     )
     expect_integrity_error(
         session,
-        Contact(company=graph["company"], full_name="Invalid Contact", status="deleted"),
+        Contact(organization_id=graph["org_id"], company=graph["company"], full_name="Invalid Contact", status="deleted"),
     )
     expect_integrity_error(
         session,
         AgentRun(
+            organization_id=graph["org_id"],
             company=graph["company"],
             contact=graph["contact"],
             agent_name="bad_agent",
@@ -165,6 +175,7 @@ def test_status_constraints_are_enforced(session: Session) -> None:
     expect_integrity_error(
         session,
         OutreachMessage(
+            organization_id=graph["org_id"],
             company=graph["company"],
             contact=graph["contact"],
             intelligence_score=graph["score"],
@@ -199,6 +210,7 @@ def test_confidence_and_strength_constraints_are_enforced(session: Session) -> N
     expect_integrity_error(
         session,
         IntentSignal(
+            organization_id=graph["org_id"],
             company=graph["company"],
             contact=graph["contact"],
             website=graph["website"],
@@ -214,6 +226,7 @@ def test_confidence_and_strength_constraints_are_enforced(session: Session) -> N
     expect_integrity_error(
         session,
         IntentSignal(
+            organization_id=graph["org_id"],
             company=graph["company"],
             contact=graph["contact"],
             website=graph["website"],
@@ -229,6 +242,7 @@ def test_confidence_and_strength_constraints_are_enforced(session: Session) -> N
     expect_integrity_error(
         session,
         OutreachMessage(
+            organization_id=graph["org_id"],
             company=graph["company"],
             contact=graph["contact"],
             intelligence_score=graph["score"],
@@ -273,6 +287,7 @@ def test_intelligence_score_range_constraints_are_enforced(
     expect_integrity_error(
         session,
         IntelligenceScore(
+            organization_id=graph["org_id"],
             company=graph["company"],
             contact=graph["contact"],
             technology=graph["technology"],
