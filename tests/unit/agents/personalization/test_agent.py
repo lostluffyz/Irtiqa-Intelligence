@@ -85,7 +85,7 @@ def services(mock_company, mock_contact, mock_technology, mock_intent_signal, mo
     intent_service.list_by_contact.return_value = []
     
     score_service = MagicMock()
-    score_service.list_by_company.return_value = [mock_intelligence_score]
+    score_service.latest_for_company.return_value = mock_intelligence_score
     
     outreach_service = MagicMock()
     outreach_service.create.side_effect = lambda **kw: OutreachMessage(

@@ -101,7 +101,7 @@ async def test_intelligence_scoring_agent_company_only(
     # Assertions
     mock_company_service.get.assert_called_once_with(company_id)
     mock_contact_service.get.assert_not_called()
-    mock_technology_service.list_by_company.assert_called_once_with(company_id, organization_id=None)
+    mock_technology_service.list_by_company.assert_called_once_with(company_id)
     mock_intent_signal_service.list_by_company.assert_called_once_with(company_id, organization_id=None)
     mock_intent_signal_service.list_by_contact.assert_not_called()
 

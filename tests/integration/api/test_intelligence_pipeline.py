@@ -7,11 +7,17 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.agents.result import AGENT_STATUS_SUCCEEDED, AgentResult
 from app.api.dependencies import get_current_organization
+from app.models.agent_run import AgentRun
+from app.models.evidence_record import EvidenceRecord
+from app.models.intelligence_score import IntelligenceScore
+from app.models.intent_signal import IntentSignal
+from app.models.outreach_message import OutreachMessage
+from app.models.technology import Technology
 from app.core.config import AuthSettings, DatabaseSettings, LoggingSettings, Settings
 from app.core.tenant import TenantContext
 from app.database import session as database_session
@@ -298,6 +304,182 @@ def _make_result() -> AgentResult:
         summary="Mock execution completed.",
         duration_ms=10.0,
     )
+
+
+def test_pipeline_real_agents(
+    api_session_factory: sessionmaker[Session],
+    test_org: Organization,
+) -> None:
+    """End-to-end pipeline test executing real agents against a real database.
+
+    Only the HTTP layer is mocked (via respx) so that DeepScraperAgent
+    can crawl without network access. All agent logic runs unchanged:
+    scraping → technology detection → intent signals → scoring → outreach.
+    """
+    from unittest.mock import AsyncMock, patch
+
+    from app.services import (
+        AgentRunService,
+        CompanyService,
+        ContactService,
+        IntelligenceScoreService,
+        IntentSignalService,
+        OutreachMessageService,
+        TechnologyService,
+        WebsiteService,
+    )
+    from app.workflows.runner import WorkflowRunner
+    from app.workflows.states import WorkflowStatus
+
+    # ── Seed database ──────────────────────────────────────────────────
+    session = api_session_factory()
+    company_id = _seed_company_via_db(session, org_id=test_org.id)
+    domain = "pipeline-job-test.example"
+    session.close()
+
+    # The DeepScraperAgent fetches robots.txt first, then the page.
+    # Use patch to intercept httpx.AsyncClient at the class level so the
+    # mock applies regardless of which event loop the agent runs in.
+    # The agent constructs httpx.AsyncClient() inside _run_async() which
+    # may create a new event loop — class-level patch survives that.
+    from unittest.mock import MagicMock
+
+    html_page = """
+            <html>
+            <head><title>Test Company</title></head>
+            <body>
+                <h1>Welcome to Test Company</h1>
+                <p>We provide innovative software solutions.</p>
+                <script src="https://www.googletagmanager.com/gtag/js?id=G-TEST"></script>
+                <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+                <script>jQuery(function() { console.log("ready"); });</script>
+                <div id="root" data-reactroot="">
+                    <h2>Our Products</h2>
+                    <p>We are growing rapidly and hiring engineers.</p>
+                    <p>We just raised a Series A funding round.</p>
+                </div>
+            </body>
+            </html>
+            """
+
+    robots_404 = AsyncMock(spec=["status_code", "headers"])
+    robots_404.status_code = 404
+    robots_404.headers = {"content-type": "text/plain"}
+
+    html_200 = AsyncMock(spec=["status_code", "text", "raise_for_status", "headers"])
+    html_200.status_code = 200
+    html_200.headers = {"content-type": "text/html"}
+    html_200.text = html_page
+    html_200.raise_for_status = AsyncMock()
+
+    async def mock_get(url, *args, **kwargs):
+        if "robots.txt" in str(url):
+            return robots_404
+        return html_200
+
+    mock_client = AsyncMock()
+    mock_client.get.side_effect = mock_get
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    # ── Set up real services ──────────────────────────────────────────
+    services = {
+        "company_service": CompanyService(),
+        "contact_service": ContactService(),
+        "website_service": WebsiteService(),
+        "technology_service": TechnologyService(),
+        "intent_signal_service": IntentSignalService(),
+        "intelligence_score_service": IntelligenceScoreService(),
+        "outreach_message_service": OutreachMessageService(),
+        "agent_run_service": AgentRunService(),
+    }
+
+    workflow_registry = WorkflowRegistry()
+    workflow_registry.register(IntelligencePipelineWorkflow)
+    runner = WorkflowRunner(workflow_registry, **services)
+    context = WorkflowContext(
+        workflow_name="intelligence_pipeline",
+        company_id=company_id,
+        organization_id=test_org.id,
+    )
+
+    # ── Execute pipeline (all 5 agents run for real) ──────────────────
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = runner.run(context)
+
+    # ── Verify workflow execution ─────────────────────────────────────
+    from app.workflows.states import WorkflowStatus as WfStatus
+
+    assert result.status == WfStatus.SUCCEEDED, (
+        f"Pipeline failed: {result.error}"
+    )
+    assert result.workflow_name == "intelligence_pipeline"
+    assert len(result.agent_run_ids) == 5
+
+    # Print output_ids for debugging
+    print(f"\n  PIPELINE OUTPUT: {dict((k, len(v)) for k, v in result.output_ids.items())}")
+
+    # All 5 output types should have non-empty results
+    assert len(result.output_ids.get("websites", [])) > 0, "No websites crawled"
+    assert len(result.output_ids.get("technologies", [])) > 0, "No technologies detected"
+    assert len(result.output_ids.get("intent_signals", [])) > 0, "No intent signals detected"
+    assert len(result.output_ids.get("intelligence_scores", [])) > 0, "No scores created"
+    assert len(result.output_ids.get("outreach_messages", [])) > 0, "No outreach messages created"
+
+    # ── Verify database persistence ───────────────────────────────────
+    with api_session_factory() as verify_session:
+        # Websites persisted
+        websites = verify_session.execute(
+            select(Website).where(Website.company_id == company_id)
+        ).scalars().all()
+        assert len(websites) > 0, "No websites were persisted"
+        assert any(w.raw_html is not None for w in websites), "No raw HTML stored"
+        assert any(w.extracted_text is not None for w in websites), "No extracted text stored"
+
+        # Technologies detected
+        technologies = verify_session.execute(
+            select(Technology).where(Technology.company_id == company_id)
+        ).scalars().all()
+        assert len(technologies) > 0, "No technologies were detected"
+
+        # Intent signals detected
+        signals = verify_session.execute(
+            select(IntentSignal).where(IntentSignal.company_id == company_id)
+        ).scalars().all()
+        assert len(signals) > 0, "No intent signals were detected"
+
+        # Intelligence scores created
+        scores = verify_session.execute(
+            select(IntelligenceScore).where(IntelligenceScore.company_id == company_id)
+        ).scalars().all()
+        assert len(scores) > 0, "No intelligence scores were created"
+        score = scores[0]
+        assert score.total_score > 0
+        assert score.organization_id == test_org.id
+
+        # Outreach messages created
+        messages = verify_session.execute(
+            select(OutreachMessage).where(OutreachMessage.company_id == company_id)
+        ).scalars().all()
+        assert len(messages) > 0, "No outreach messages were created"
+        assert all(m.organization_id == test_org.id for m in messages)
+
+        # Evidence records — agents in the intelligence pipeline don't
+        # produce evidence items directly (evidence is created by
+        # ScoreRefreshWorkflow, which links technologies and signals
+        # to the generated score as a separate follow-up step).
+        evidence = verify_session.execute(
+            select(EvidenceRecord).where(EvidenceRecord.company_id == company_id)
+        ).scalars().all()
+        # No assertion on evidence count — agents may or may not produce it
+
+        # Agent runs created
+        agent_runs = verify_session.execute(
+            select(AgentRun).where(AgentRun.company_id == company_id)
+        ).scalars().all()
+        assert len(agent_runs) == 5, "Expected 5 agent runs (one per agent)"
+        assert all(ar.organization_id == test_org.id for ar in agent_runs)
+        assert all(ar.status == "succeeded" for ar in agent_runs)
 
 
 def _test_settings(database_url: str = "sqlite:///:memory:") -> Settings:

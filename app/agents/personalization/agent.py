@@ -60,7 +60,7 @@ class PersonalizationAgent(BaseAgent):
         if context.contact_id:
             contact = contact_service.get(context.contact_id)
 
-        technologies: list[Technology] = technology_service.list_by_company(context.company_id, organization_id=context.organization_id)
+        technologies: list[Technology] = technology_service.list_by_company(context.company_id)
         intent_signals: list[IntentSignal] = intent_signal_service.list_by_company(context.company_id, organization_id=context.organization_id)
         if contact:
             contact_signals = intent_signal_service.list_by_contact(contact.id, organization_id=context.organization_id)
@@ -71,10 +71,9 @@ class PersonalizationAgent(BaseAgent):
                     seen_ids.add(s.id)
 
         # Fetch latest intelligence score
-        scores: list[IntelligenceScore] = intelligence_score_service.list_by_company(context.company_id, organization_id=context.organization_id)
-        latest_score: IntelligenceScore | None = None
-        if scores:
-            latest_score = sorted(scores, key=lambda s: s.scored_at, reverse=True)[0]
+        latest_score: IntelligenceScore | None = intelligence_score_service.latest_for_company(
+            context.company_id, organization_id=context.organization_id,
+        )
 
         # 3. Angle Selector
         primary_angle = "fit_driven"

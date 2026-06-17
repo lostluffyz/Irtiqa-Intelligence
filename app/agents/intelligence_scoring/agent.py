@@ -54,7 +54,7 @@ class IntelligenceScoringAgent(BaseAgent):
             if not contact:
                 raise ValueError(f"Contact {context.contact_id} not found.")
 
-        technologies: list[Technology] = technology_service.list_by_company(context.company_id, organization_id=context.organization_id)
+        technologies: list[Technology] = technology_service.list_by_company(context.company_id)
 
         # We fetch intent signals for the company. If contact_id is present, we could filter by it,
         # but the scoring policy typically uses all intent signals for the company/contact context.
