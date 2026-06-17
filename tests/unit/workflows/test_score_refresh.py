@@ -60,10 +60,10 @@ class IntentSignalServiceDouble:
     def __init__(self, intent_signals: list[IntentSignal]) -> None:
         self.intent_signals = intent_signals
 
-    def list_by_company(self, company_id: str) -> list[IntentSignal]:
+    def list_by_company(self, company_id: str, *, organization_id: str | None = None) -> list[IntentSignal]:
         return [signal for signal in self.intent_signals if signal.company_id == company_id]
 
-    def list_by_contact(self, contact_id: str) -> list[IntentSignal]:
+    def list_by_contact(self, contact_id: str, *, organization_id: str | None = None) -> list[IntentSignal]:
         return [signal for signal in self.intent_signals if signal.contact_id == contact_id]
 
 

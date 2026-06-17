@@ -75,6 +75,7 @@ class ScoreRefreshWorkflow(Workflow):
             agent_run = agent_run_service.start_workflow_run(
                 agent_name=SERVICE_AGENT_NAME,
                 workflow_name=self.name,
+                organization_id=context.organization_id,
                 company_id=normalized_company_id,
                 contact_id=normalized_contact_id,
                 input_summary=self._input_summary(context),
@@ -84,6 +85,7 @@ class ScoreRefreshWorkflow(Workflow):
                 intent_signal_service,
                 company_id=normalized_company_id,
                 contact_id=normalized_contact_id,
+                organization_id=context.organization_id,
             )
             scored_at = datetime.now(timezone.utc)
             policy_result = self.policy.score(
@@ -97,6 +99,7 @@ class ScoreRefreshWorkflow(Workflow):
                 )
             )
             score = score_service.create(
+                organization_id=context.organization_id,
                 company_id=normalized_company_id,
                 contact_id=normalized_contact_id,
                 technology_id=policy_result.primary_technology_id,
@@ -146,6 +149,7 @@ class ScoreRefreshWorkflow(Workflow):
                 evidence_service = EvidenceService()
                 evidence_service.record_evidence_batch(
                     items=evidence_items,
+                    organization_id=context.organization_id,
                     agent_run_id=agent_run.id,
                     company_id=normalized_company_id,
                     contact_id=normalized_contact_id,
@@ -242,10 +246,11 @@ class ScoreRefreshWorkflow(Workflow):
         *,
         company_id: str,
         contact_id: str | None,
+        organization_id: str | None = None,
     ) -> Sequence[IntentSignal]:
         if contact_id is not None:
-            return intent_signal_service.list_by_contact(contact_id)
-        return intent_signal_service.list_by_company(company_id)
+            return intent_signal_service.list_by_contact(contact_id, organization_id=organization_id)
+        return intent_signal_service.list_by_company(company_id, organization_id=organization_id)
 
     def _mark_failed(self, agent_run: AgentRun | None, error: IrtiqaError) -> None:
         if agent_run is None:

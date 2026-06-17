@@ -7,7 +7,10 @@ import pytest
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from uuid import uuid4
+
 from app.database import session as database_session
+from app.models.organization import Organization
 from app.models.agent_run import AgentRun
 from app.models.intelligence_score import IntelligenceScore
 from app.services import (
@@ -46,12 +49,22 @@ def service_database(service_session_factory: sessionmaker[Session]) -> Iterator
     yield service_session_factory
 
 
+@pytest.fixture()
+def org_id(service_session_factory: sessionmaker[Session]) -> str:
+    _org_id = str(uuid4())
+    with service_session_factory() as session:
+        session.add(Organization(id=_org_id, name="Score Refresh Test Org", slug="score-refresh-test", status="active"))
+        session.commit()
+    return _org_id
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
 def test_score_refresh_workflow_persists_score_and_agent_run(
     service_database: sessionmaker[Session],
+    org_id: str,
 ) -> None:
     company_service = CompanyService()
     contact_service = ContactService()
@@ -60,8 +73,7 @@ def test_score_refresh_workflow_persists_score_and_agent_run(
     score_service = IntelligenceScoreService()
     agent_run_service = AgentRunService()
 
-    company = company_service.create(
-        name="Irtiqa Score Refresh Company",
+    company = company_service.create(organization_id=org_id, name="Irtiqa Score Refresh Company",
         domain="score-refresh.example",
         industry="software",
         company_size="51-200",
@@ -70,8 +82,7 @@ def test_score_refresh_workflow_persists_score_and_agent_run(
         linkedin_url="https://linkedin.com/company/score-refresh",
         status="active",
     )
-    contact = contact_service.create(
-        company_id=company.id,
+    contact = contact_service.create(organization_id=org_id, company_id=company.id,
         full_name="Asha Rao",
         email="asha.rao@score-refresh.example",
         title="VP Revenue",
@@ -80,8 +91,7 @@ def test_score_refresh_workflow_persists_score_and_agent_run(
         linkedin_url="https://linkedin.com/in/asha-score-refresh",
         status="active",
     )
-    technology = technology_service.create(
-        company_id=company.id,
+    technology = technology_service.create(company_id=company.id,
         name="HubSpot",
         category="crm",
         detection_method="html_signature",
@@ -89,8 +99,7 @@ def test_score_refresh_workflow_persists_score_and_agent_run(
         first_detected_at=utc_now(),
         last_detected_at=utc_now(),
     )
-    intent_signal_service.create(
-        company_id=company.id,
+    intent_signal_service.create(organization_id=org_id, company_id=company.id,
         contact_id=contact.id,
         technology_id=technology.id,
         signal_type="technology_change",
@@ -118,6 +127,7 @@ def test_score_refresh_workflow_persists_score_and_agent_run(
             workflow_name="score_refresh",
             company_id=company.id,
             contact_id=contact.id,
+            organization_id=org_id,
         )
     )
     second_result = runner.run(
@@ -125,6 +135,7 @@ def test_score_refresh_workflow_persists_score_and_agent_run(
             workflow_name="score_refresh",
             company_id=company.id,
             contact_id=contact.id,
+            organization_id=org_id,
         )
     )
 
