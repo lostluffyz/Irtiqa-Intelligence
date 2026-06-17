@@ -76,6 +76,7 @@ class BaseAgent(ABC):
             agent_run = agent_run_service.start_workflow_run(
                 agent_name=self.name,
                 workflow_name=context.workflow_name or "",
+                organization_id=context.organization_id,
                 company_id=context.company_id,
                 contact_id=context.contact_id,
                 input_summary=self._build_input_summary(context),
