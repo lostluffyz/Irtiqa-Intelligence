@@ -101,15 +101,15 @@ async def test_intelligence_scoring_agent_company_only(
     # Assertions
     mock_company_service.get.assert_called_once_with(company_id)
     mock_contact_service.get.assert_not_called()
-    mock_technology_service.list_by_company.assert_called_once_with(company_id)
-    mock_intent_signal_service.list_by_company.assert_called_once_with(company_id)
+    mock_technology_service.list_by_company.assert_called_once_with(company_id, organization_id=None)
+    mock_intent_signal_service.list_by_company.assert_called_once_with(company_id, organization_id=None)
     mock_intent_signal_service.list_by_contact.assert_not_called()
 
     assert mock_intelligence_score_service.create.call_count == 1
-    create_schema = mock_intelligence_score_service.create.call_args[0][0]
-    assert create_schema.company_id == company_id
-    assert create_schema.contact_id is None
-    assert create_schema.total_score > 0
+    _, kwargs = mock_intelligence_score_service.create.call_args
+    assert kwargs.get("company_id") == company_id
+    assert kwargs.get("contact_id") is None
+    assert kwargs.get("total_score", 0) > 0
 
     assert output["output_ids"]["intelligence_scores"] == [expected_score_id]
 
@@ -178,13 +178,13 @@ async def test_intelligence_scoring_agent_with_contact(
     # Assertions
     mock_company_service.get.assert_called_once_with(company_id)
     mock_contact_service.get.assert_called_once_with(contact_id)
-    
+
     assert mock_intelligence_score_service.create.call_count == 1
-    create_schema = mock_intelligence_score_service.create.call_args[0][0]
-    assert create_schema.company_id == company_id
-    assert create_schema.contact_id == contact_id
+    _, kwargs = mock_intelligence_score_service.create.call_args
+    assert kwargs.get("company_id") == company_id
+    assert kwargs.get("contact_id") == contact_id
     # Ensure it parsed intent signals
-    assert "2 intent signals" in create_schema.rationale
+    assert "2 intent signals" in kwargs.get("rationale", "")
 
     assert output["output_ids"]["intelligence_scores"] == [expected_score_id]
 
