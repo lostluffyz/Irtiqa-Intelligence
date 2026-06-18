@@ -175,7 +175,7 @@ class TestLeadRetrievalServiceAggregation:
         assert lead.latest_intelligence_score is not None
         assert lead.latest_intelligence_score.total_score == 81.4
         assert lead.latest_intelligence_score.opportunity_score == 82.0
-        assert lead.urgency_score == 76.0 if hasattr(lead, "urgency_score") else lead.latest_intelligence_score.urgency_score == 76.0
+        assert lead.latest_intelligence_score.urgency_score == 76.0
 
         # Outreach messages
         assert len(lead.outreach_messages) == 1
@@ -277,8 +277,8 @@ class TestLeadRetrievalServiceMinimumScore:
         svc = LeadRetrievalService()
         result = svc.get_leads(organization_id=org_id, limit=100, offset=0, minimum_score=90.0)
         # 81.4 < 90.0, so filtered out
-        assert result.total == 1  # total companies count is unaffected
-        assert len(result.items) == 0  # but items list is filtered
+        assert result.total == 0  # total reflects filtered count
+        assert len(result.items) == 0
 
     def test_keeps_above_minimum(self, service_database: sessionmaker[Session], org_id: str) -> None:
         _seed_lead_data(org_id=org_id, domain="above.test", company_name="Above Min")

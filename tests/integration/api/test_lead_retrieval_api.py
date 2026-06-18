@@ -263,7 +263,7 @@ def test_list_leads_minimum_score_filter(
     response = client.get("/leads", params={"minimum_score": 90.0})
     assert response.status_code == 200
     data = response.json()
-    assert data["total"] == 1
+    assert data["total"] == 0  # total reflects filtered count
     assert len(data["items"]) == 0
 
     # Score is 81.4, filter at 80.0 → should include

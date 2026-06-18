@@ -96,6 +96,9 @@ class LeadRetrievalService:
                     companies = self._apply_score_filter(
                         companies, scores_by_company, minimum_score
                     )
+                    # Recompute total across the full org so pagination
+                    # remains correct after filtering.
+                    total = self._count_filtered(session, company_repo, organization_id, minimum_score)
 
                 # 4. Build aggregated lead responses
                 leads = []
@@ -244,6 +247,32 @@ class LeadRetrievalService:
             if score is not None and score.total_score >= minimum_score:
                 filtered.append(company)
         return filtered
+
+    def _count_filtered(
+        self,
+        session: Session,
+        company_repo: CompanyRepository,
+        organization_id: str,
+        minimum_score: float,
+    ) -> int:
+        """Count org companies whose latest score >= minimum_score.
+
+        Loads all company IDs for the org, fetches their latest scores,
+        and counts those that meet the threshold. This is only called
+        when ``minimum_score`` is active, so the extra query is bounded
+        by the org's company count.
+        """
+        all_companies = company_repo.list(organization_id=organization_id, limit=500, offset=0)
+        all_ids = [c.id for c in all_companies]
+        if not all_ids:
+            return 0
+        all_scores = self._fetch_latest_scores(session, all_ids)
+        count = 0
+        for company in all_companies:
+            score = all_scores.get(company.id)
+            if score is not None and score.total_score >= minimum_score:
+                count += 1
+        return count
 
     def _build_lead(
         self,
