@@ -25,6 +25,7 @@ Current architectural direction:
 *   **Intelligence Pipeline Workflow**: End-to-end orchestration chaining all 5 agents into a single pipeline triggered via `POST /intelligence/pipeline`.
 *   **Multi-Tenancy Phase 1**: Organization and Membership foundation with owner-protection, role management, 5-step slug generation, and `create_with_owner()` atomicity.
 *   **Authentication System**: RS256 JWT, bcrypt password hashing, email verification, database-backed rate limiting, self-service account deletion, Swagger/OpenAPI bearer auth integration.
+*   **Lead Retrieval API**: Tenant-scoped aggregated lead intelligence endpoint at `GET /api/v1/leads`. Returns companies with technologies, intent signals, latest intelligence score, and outreach messages in a single response. Supports `limit`, `offset`, and `minimum_score` query parameters.
 
 ### Next Steps
 
@@ -111,24 +112,24 @@ Current status:
 - Intelligence Scoring Agent is complete.
 - Personalization Agent is complete.
 - Task 12, Background Job Foundation, is complete.
-- Current full test suite result is `421 passed` (397 SQLite + 24 PostgreSQL).
+- Current full test suite result is `489 passed` (27 skipped PostgreSQL-only).
 - Evidence records system implemented with dedicated `evidence_records` table, service, API, and agent integration.
 - Intelligence Pipeline workflow implemented: chains all 5 agents (Deep Scraper → Technographic → Intent Signal → Intelligence Scoring → Personalization) into a single orchestrated run triggered via API.
 - Alembic schema drift check reports no new upgrade operations after upgrading to head.
 - Generated artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` should remain uncommitted.
-- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are complete. Background Job Foundation is complete. Scraping orchestration, frontend, and external integrations have not been implemented.
+- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are complete. Background Job Foundation is complete. Lead Retrieval API is complete. Scraping orchestration, frontend, and external integrations have not been implemented.
 
 ## Repository Health Summary
 
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `421 passed` (397 SQLite + 24 PostgreSQL).
+- Current test count: `489 passed` (27 skipped PostgreSQL-only).
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, Evidence Records System, Intelligence Pipeline Workflow, and Multi-Tenancy Phase 1 (Organization & Membership) are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for all models exist; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent exist; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
+- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, Evidence Records System, Intelligence Pipeline Workflow, Multi-Tenancy Phase 1 (Organization & Membership), and Lead Retrieval API are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints for all models exist; Lead Retrieval endpoint exists; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent exist; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- CI status: GitHub Actions workflow configured with ruff, mypy, compileall validation and full test suite (421 tests: 397 SQLite + 24 PostgreSQL) on every push and pull request.
+- CI status: GitHub Actions workflow configured with ruff, mypy, compileall validation and full test suite (489 tests: 397 SQLite + 24 PostgreSQL) on every push and pull request.
 - Next milestone: external integrations and orchestration.
 
 ## Database Schema
@@ -346,7 +347,7 @@ Features:
 
 ### API Endpoints
 
-Implemented Phase 1, Phase 2, and Phase 3 CRUD routes:
+Implemented Phase 1, Phase 2, and Phase 3 CRUD routes and Lead Retrieval API:
 
 - `POST /companies`
 - `GET /companies`
@@ -388,6 +389,25 @@ Implemented Phase 1, Phase 2, and Phase 3 CRUD routes:
 - `GET /agent-runs/{agent_run_id}`
 - `PATCH /agent-runs/{agent_run_id}`
 - `DELETE /agent-runs/{agent_run_id}`
+
+Implemented Lead Retrieval API:
+
+- `GET /leads` — Aggregated lead intelligence with tenant isolation.
+
+Query parameters:
+
+- `limit` (1-500, default 100)
+- `offset` (default 0)
+- `minimum_score` (0.0-100.0, optional)
+
+Response shape:
+
+- `company_id`, `company_name`, `domain`, `industry`, `status`
+- `technologies[]` — `name`, `category`
+- `intent_signals[]` — `signal_type`, `confidence`
+- `latest_intelligence_score` — `total_score`, `opportunity_score` (fit_score), `urgency_score` (intent_score)
+- `outreach_messages[]` — `channel`, `subject`, `message_body`
+- `updated_at`
 
 Route conventions:
 
@@ -496,6 +516,7 @@ Implemented in `app/services/`:
 - `evidence_service.py`
 - `membership_service.py`
 - `organization_service.py`
+- `lead_retrieval_service.py`
 
 Service convention:
 
@@ -524,6 +545,7 @@ Implemented Pydantic v2 schemas in `app/schemas/`:
 - `auth.py`
 - `membership.py`
 - `organization.py`
+- `lead.py`
 
 Schema convention:
 
@@ -642,7 +664,7 @@ python -m pytest
 Result:
 
 ```text
-421 passed (397 SQLite + 24 PostgreSQL)
+489 passed (27 skipped)
 ```
 
 PostgreSQL verification tests:
@@ -778,6 +800,15 @@ Completed:
 - Fixed migration `20260531_0002`: `recreate="always"` -> `recreate="auto"` for PostgreSQL compatibility.
 - Fixed migration `20260609_0003`: added `op.f()` wrapper to constraint names for PostgreSQL compatibility.
 - Added 24 PostgreSQL verification tests in `tests/integration/test_postgresql_compatibility.py`.
+- Implemented Lead Retrieval API: tenant-scoped aggregated lead intelligence at `GET /api/v1/leads`.
+- Added `LeadRetrievalService` with batch aggregation queries to avoid N+1 patterns.
+- Added `app/schemas/lead.py` with `LeadResponse`, `LeadListResponse`, and nested response schemas.
+- Added `count_by_organization` method to `CompanyRepository` for tenant-scoped total count.
+- Added `get_lead_retrieval_service` dependency provider in `app/api/dependencies.py`.
+- Added `GET /api/v1/leads` endpoint with `limit`, `offset`, and `minimum_score` query parameters.
+- Added unit tests for lead response schemas (`tests/unit/test_lead_schemas.py`).
+- Added service integration tests for lead retrieval aggregation, tenant isolation, score filtering, and pagination (`tests/integration/test_lead_retrieval_service.py`).
+- Added API integration tests for lead retrieval endpoint (`tests/integration/api/test_lead_retrieval_api.py`).
 
 Documentation currently aligned with implemented schema:
 

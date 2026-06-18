@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.models.company import Company
 from app.repositories.base import BaseRepository
@@ -25,3 +25,9 @@ class CompanyRepository(BaseRepository[Company]):
         statement = select(Company).where(Company.status == status)
         statement = self._apply_tenant_filter(statement, organization_id)
         return self.scalars(statement.limit(limit))
+
+    def count_by_organization(self, organization_id: str) -> int:
+        """Count companies belonging to a specific organization."""
+        statement = select(func.count()).select_from(Company)
+        statement = self._apply_tenant_filter(statement, organization_id)
+        return self.session.scalar(statement) or 0
