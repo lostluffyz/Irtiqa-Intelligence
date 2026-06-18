@@ -23,6 +23,14 @@ Irtiqa Intelligence uses a SQLite-first relational database with SQLAlchemy as t
 - `outreach_messages`
 - `evidence_records`
 - `agent_runs`
+- `jobs`
+- `users`
+- `organizations`
+- `memberships`
+- `refresh_tokens`
+- `email_verification_tokens`
+- `password_reset_tokens`
+- `failed_login_attempts`
 
 ## Entity Relationship Diagram
 
@@ -868,15 +876,15 @@ PostgreSQL compatibility has been verified against PostgreSQL 18.x. The followin
 
 ### Verified Behavior
 
-- All 5 Alembic migrations (initial schema, database hardening, website content columns, jobs table, evidence records) apply cleanly to PostgreSQL.
-- All 5 migrations downgrade and re-apply cleanly (full round-trip).
+- All 8 Alembic migrations (initial schema, database hardening, website content columns, jobs table, evidence records, auth tables, organizations/memberships, organization_id to domain tables) apply cleanly to PostgreSQL.
+- All 8 migrations downgrade and re-apply cleanly (full round-trip).
 - Alembic `check` reports no new upgrade operations on PostgreSQL.
-- All 10 application tables are created with correct columns matching model metadata.
+- All 17 tables are created with correct columns matching model metadata.
 - All check constraints are created and enforced on PostgreSQL.
 - SQLAlchemy dialect-default pool classes are correct: `NullPool` for SQLite, `QueuePool` for PostgreSQL.
 - Engine-level SQLite PRAGMAs (`check_same_thread`, `foreign_keys`, `WAL`, `busy_timeout`) are correctly gated behind `is_sqlite`.
 - 24 dedicated PostgreSQL verification tests pass.
-- Existing 284 SQLite tests all pass with no regressions.
+- Existing 489 tests all pass with no regressions.
 
 ### Changes Applied
 

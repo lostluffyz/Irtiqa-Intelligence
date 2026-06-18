@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Background Job Foundation — Implementation Checklist
 
 ## Phase 1: Schema & Model Layer

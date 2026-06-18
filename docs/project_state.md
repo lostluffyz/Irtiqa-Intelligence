@@ -4,7 +4,7 @@ This document is the handoff reference for continuing Irtiqa Intelligence develo
 
 ## Current Architecture
 
-Irtiqa Intelligence is a production-grade lead intelligence platform in backend-foundation stage.
+Irtiqa Intelligence is a production-grade lead intelligence platform in backend-complete stage.
 
 Current architectural direction:
 
@@ -13,8 +13,8 @@ Current architectural direction:
 ### Backend
 *   **FastAPI**: Configured and running.
 *   **Database**: SQLite with SQLAlchemy 2.0 and Alembic.
-*   **Models**: `Company`, `Website`, `Technology`, `IntentSignal`, `Job`.
-*   **Service Layer**: `CompanyService`, `WebsiteService`, `TechnologyService`, `IntentSignalService`, `AgentRunService`, `JobService` implemented.
+*   **Models**: `Company`, `Contact`, `Website`, `Technology`, `IntentSignal`, `IntelligenceScore`, `OutreachMessage`, `AgentRun`, `Job`, `User`, `Organization`, `Membership`, `EvidenceRecord`, plus auth models (`EmailVerificationToken`, `PasswordResetToken`, `RefreshToken`, `FailedLoginAttempt`).
+*   **Service Layer**: `CompanyService`, `ContactService`, `WebsiteService`, `TechnologyService`, `IntentSignalService`, `IntelligenceScoreService`, `OutreachMessageService`, `AgentRunService`, `JobService`, `EvidenceService`, `AuthService`, `MembershipService`, `OrganizationService`, `LeadRetrievalService` implemented.
 *   **Agent Interface Foundation**: Standardized abstractions via `app.agents` (`BaseAgent`, `AgentContext`, `AgentResult`).
 *   **Deep Scraper Agent**: Core crawling, parsing, and structured data persistence implemented and tested.
 *   **Technographic Agent**: Signature-based technology detection implemented and tested.
@@ -129,12 +129,12 @@ Current health:
 - Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, Evidence Records System, Intelligence Pipeline Workflow, Multi-Tenancy Phase 1 (Organization & Membership), and Lead Retrieval API are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints for all models exist; Lead Retrieval endpoint exists; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent exist; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- CI status: GitHub Actions workflow configured with ruff, mypy, compileall validation and full test suite (489 tests: 397 SQLite + 24 PostgreSQL) on every push and pull request.
+- CI status: GitHub Actions workflow configured with ruff, mypy, compileall validation and full test suite (489 passed, 27 skipped PostgreSQL-only) on every push and pull request.
 - Next milestone: external integrations and orchestration.
 
 ## Database Schema
 
-The implemented schema contains twelve core tables:
+The implemented schema contains seventeen tables:
 
 - `companies`
 - `contacts`
@@ -148,6 +148,11 @@ The implemented schema contains twelve core tables:
 - `organizations`
 - `agent_runs`
 - `jobs`
+- `users`
+- `refresh_tokens`
+- `email_verification_tokens`
+- `password_reset_tokens`
+- `failed_login_attempts`
 
 Relationship summary:
 
@@ -193,6 +198,7 @@ Schema design choices:
 - Indexes are defined on primary query fields and composite lookup paths.
 - Alembic migration revision `20260531_0001` creates the initial schema.
 - Alembic migration revision `20260531_0002` adds database hardening constraints.
+- Alembic migration revision `20260616_0007` adds `organization_id` to all domain tables for multi-tenancy.
 - SQLite connections enable foreign keys, WAL mode, and busy timeout through isolated engine configuration.
 - SQLite backup and restore procedures are documented in `docs/database.md`.
 - Confidence values are constrained from `0.0` to `1.0`.
@@ -242,11 +248,17 @@ Implemented SQLAlchemy models in `app/models/`:
 - `technology.py`
 - `intent_signal.py`
 - `intelligence_score.py`
-- `job.py`
-- `membership.py`
-- `organization.py`
 - `outreach_message.py`
 - `agent_run.py`
+- `job.py`
+- `user.py`
+- `organization.py`
+- `membership.py`
+- `evidence_record.py`
+- `email_verification_token.py`
+- `password_reset_token.py`
+- `refresh_token.py`
+- `failed_login_attempt.py`
 
 `app/models/__init__.py` exports all model classes and metadata.
 
@@ -444,13 +456,15 @@ Features:
 - Deterministic `score_refresh.v1` workflow using persisted company, contact, technology, and intent signal records.
 - Append-only intelligence score creation with `agent_runs` observability.
 - Re-export of existing `WorkflowError` and `WorkflowStateError`.
+- `intelligence_pipeline.py`: End-to-end orchestration workflow chaining Deep Scraper → Technographic → Intent Signal → Intelligence Scoring → Personalization agents.
+- `intelligence_pipeline` executes all 5 agents sequentially with error propagation and `agent_runs` observability at each step.
 
 Current boundaries:
 
 - Workflows are designed to call services, never repositories.
 - Services remain transaction owners.
-- `score_refresh` is the first concrete workflow.
-- No agents, jobs, or external integrations are implemented.
+- `score_refresh` and `intelligence_pipeline` are concrete workflows.
+- Background Job Foundation integrates with workflows for scheduling and execution.
 
 ### Transaction Ownership Strategy
 
@@ -490,8 +504,11 @@ Implemented in `app/repositories/`:
 - `intelligence_score_repository.py`
 - `outreach_message_repository.py`
 - `agent_run_repository.py`
+- `job_repository.py`
+- `evidence_repository.py`
 - `membership_repository.py`
 - `organization_repository.py`
+- `user_repository.py`
 
 Repository convention:
 
@@ -514,6 +531,7 @@ Implemented in `app/services/`:
 - `agent_run_service.py`
 - `auth_service.py`
 - `evidence_service.py`
+- `job_service.py`
 - `membership_service.py`
 - `organization_service.py`
 - `lead_retrieval_service.py`
@@ -543,6 +561,8 @@ Implemented Pydantic v2 schemas in `app/schemas/`:
 - `outreach_message.py`
 - `agent_run.py`
 - `auth.py`
+- `evidence.py`
+- `job.py`
 - `membership.py`
 - `organization.py`
 - `lead.py`
@@ -664,7 +684,7 @@ python -m pytest
 Result:
 
 ```text
-489 passed (27 skipped)
+489 passed, 27 skipped
 ```
 
 PostgreSQL verification tests:
@@ -678,7 +698,7 @@ Full suite against PostgreSQL:
 
 ```text
 DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/irtiqa_verify python -m pytest
-307 passed, 1 skipped (health endpoint asserts "sqlite")
+307 passed, 1 expected failure (health endpoint asserts "sqlite")
 ```
 
 Additional migration verification:
@@ -828,8 +848,8 @@ Known issues or gaps:
 - No repository methods enforce domain-level validation.
 - `technology_catalog` is not implemented; `technologies` currently stores company-specific detections directly.
 - There is no dedicated `workflow_runs` table; workflow state is expected to be inferred from `agent_runs` for now.
-- Multi-Tenancy Phase 2 (JWT org claims, TenantContext, auth integration) is planned.
-- Multi-Tenancy Phase 3 (organization_id on domain tables, tenant-scoped queries) is planned.
+- Multi-Tenancy Phase 2 (JWT org claims, TenantContext, auth integration) is complete.
+- Multi-Tenancy Phase 3 (organization_id on domain tables, tenant-scoped queries) is complete (migration 20260616_0007).
 - Invitations and API Keys are planned for future phases.
 
 ## CI/CD Pipeline
@@ -837,7 +857,7 @@ Known issues or gaps:
 CI is configured with GitHub Actions. Every push and pull request runs:
 
 - **validate** job: ruff linting (advisory), mypy type checking (advisory), compileall syntax verification (blocking).
-- **test** job: SQLite migration application, alembic schema drift check, SQLite full test suite (397 tests, blocking), PostgreSQL 18 service container with migration application and 24 compatibility tests (blocking).
+- **test** job: SQLite migration application, alembic schema drift check, SQLite full test suite (blocking), PostgreSQL 18 service container with migration application and 24 compatibility tests (blocking).
 
 Ruff and mypy are in advisory mode during the current phase to allow incremental debt reduction. They report violations as warnings in the check output but do not block the pipeline. Test execution is the primary merge gate. A future milestone will remove `continue-on-error` after pre-existing code quality issues are resolved.
 

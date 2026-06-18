@@ -11,13 +11,23 @@ Current tables:
 - `intent_signals`
 - `intelligence_scores`
 - `outreach_messages`
+- `evidence_records`
+- `memberships`
+- `organizations`
 - `agent_runs`
+- `jobs`
+- `users`
+- `refresh_tokens`
+- `email_verification_tokens`
+- `password_reset_tokens`
+- `failed_login_attempts`
 
-Workflow foundation is implemented, and the first concrete executable workflow is available:
+Workflow foundation is implemented. Two concrete executable workflows are available:
 
-- `score_refresh`
+- `score_refresh` — deterministic scoring from existing data
+- `intelligence_pipeline` — end-to-end orchestration chaining all 5 agents
 
-No agents, jobs, scraping, or external integrations are implemented yet.
+Background Job Foundation is implemented with in-process scheduling, execution, and monitoring for agents and workflows.
 
 ## Workflow Principles
 
@@ -205,6 +215,34 @@ Scores are clamped to database-supported ranges:
 - confidence: `0.0` to `1.0`
 
 The policy records `score_version=score_refresh.v1` and a rationale summarizing the persisted evidence counts and component scores.
+
+## Implemented Workflow: intelligence_pipeline
+
+`intelligence_pipeline` chains all 5 agents into a single orchestrated run triggered via `POST /intelligence/pipeline`.
+
+Implemented file:
+
+- `app/workflows/intelligence_pipeline.py`
+
+### Execution Steps
+
+| Step | Agent | Input | Output |
+|------|-------|-------|--------|
+| 1 | Deep Scraper | company_id, crawl options | `websites` |
+| 2 | Technographic Intelligence | company_id | `technologies` |
+| 3 | Intent Signal | company_id | `intent_signals` |
+| 4 | Intelligence Scoring | company_id, contact_id | `intelligence_scores` |
+| 5 | Personalization | company_id, contact_id | `outreach_messages` |
+
+Each step creates an `agent_runs` record. If any step fails, the workflow raises a `WorkflowError` and marks the corresponding `agent_runs` row as `failed`.
+
+### Job Integration
+
+The pipeline is triggered asynchronously through the Background Job Foundation:
+
+- `POST /intelligence/pipeline` schedules a workflow job.
+- `GET /intelligence/pipeline/{job_id}` returns the job status.
+- The `JobRunner` dispatches the workflow to `IntelligencePipelineWorkflow`.
 
 ## Outreach Message Workflow
 

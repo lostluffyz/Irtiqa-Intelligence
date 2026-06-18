@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Intelligence Pipeline Design
 
 ## 1. Purpose

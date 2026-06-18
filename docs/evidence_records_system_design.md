@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Evidence Records System Design
 
 ## 1. Purpose

@@ -62,9 +62,13 @@ Irtiqa-Intelligence/
 |       |-- technology_repository.py
 |       |-- intent_signal_repository.py
 |       |-- intelligence_score_repository.py
-|       |-- job_repository.py
 |       |-- outreach_message_repository.py
-|       `-- agent_run_repository.py
+|       |-- agent_run_repository.py
+|       |-- job_repository.py
+|       |-- evidence_repository.py
+|       |-- membership_repository.py
+|       |-- organization_repository.py
+|       `-- user_repository.py
 |
 |-- app/agents/
 |   |-- __init__.py
@@ -89,9 +93,14 @@ Irtiqa-Intelligence/
 |   |-- technology_service.py
 |   |-- intent_signal_service.py
 |   |-- intelligence_score_service.py
-|   |-- job_service.py
 |   |-- outreach_message_service.py
-|   `-- agent_run_service.py
+|   |-- agent_run_service.py
+|   |-- job_service.py
+|   |-- evidence_service.py
+|   |-- auth_service.py
+|   |-- membership_service.py
+|   |-- organization_service.py
+|   `-- lead_retrieval_service.py
 |
 |-- app/main.py
 |
@@ -104,9 +113,14 @@ Irtiqa-Intelligence/
 |   |-- technology.py
 |   |-- intent_signal.py
 |   |-- intelligence_score.py
-|   |-- job.py
 |   |-- outreach_message.py
-|   `-- agent_run.py
+|   |-- agent_run.py
+|   |-- job.py
+|   |-- evidence.py
+|   |-- auth.py
+|   |-- membership.py
+|   |-- organization.py
+|   `-- lead.py
 |
 |-- app/workflows/
 |   |-- __init__.py
@@ -133,10 +147,14 @@ Irtiqa-Intelligence/
 |       |-- env.py
 |       |-- script.py.mako
 |       `-- versions/
-|           `-- 20260531_0001_initial_schema.py
-|           `-- 20260531_0002_database_hardening.py
-|           `-- 20260603_0003_add_website_content_columns.py
-|           `-- 20260609_0003_add_jobs_table.py
+|           |-- 20260531_0001_initial_schema.py
+|           |-- 20260531_0002_database_hardening.py
+|           |-- 20260603_0003_add_website_content_columns.py
+|           |-- 20260609_0003_add_jobs_table.py
+|           |-- 20260611_0004_create_evidence_records.py
+|           |-- 20260612_0005_create_auth_tables.py
+|           |-- 20260613_0006_create_organizations_memberships.py
+|           `-- 20260616_0007_add_organization_id_to_domain_tables.py
 |
 |-- docs/
 |   |-- agents.md
@@ -192,8 +210,15 @@ Implemented tables:
 6. `intelligence_scores`
 7. `outreach_messages`
 8. `evidence_records`
-9. `agent_runs`
-10. `jobs`
+9. `memberships`
+10. `organizations`
+11. `agent_runs`
+12. `jobs`
+13. `users`
+14. `refresh_tokens`
+15. `email_verification_tokens`
+16. `password_reset_tokens`
+17. `failed_login_attempts`
 
 ### Schema Relationships
 
@@ -466,7 +491,7 @@ python -m pytest
 Result:
 
 ```text
-421 passed (397 SQLite + 24 PostgreSQL)
+489 passed, 27 skipped
 ```
 
 Current test coverage verifies:
@@ -555,10 +580,10 @@ Current health:
 
 - Foundation status: healthy.
 - Stage: Backend Intelligence Agents
-- Test Count: `421 passed` (397 SQLite + 24 PostgreSQL)
+- Test Count: `489 passed, 27 skipped`.
 - Remaining work: PostgreSQL scaling, deployment.
 - Architecture status: FastAPI skeleton, CRUD API Endpoints Phase 1, Phase 2, and Phase 3, SQLAlchemy models, Alembic migrations, SQLite session management, repositories, services, Pydantic schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Background Job Foundation, Evidence Records System, Intelligence Pipeline Workflow, Multi-Tenancy Phase 1 (Organization & Membership), Authentication (RS256 JWT, bcrypt, email verification, rate limiting), structured logging, structured errors, database hardening, and SQLite backup documentation are implemented.
-- CI status: GitHub Actions workflow configured with ruff (advisory), mypy (advisory), compileall validation, and full test suite (330 tests: 306 SQLite + 24 PostgreSQL) on every push and pull request. Ruff and mypy are advisory to allow incremental debt reduction; test execution is the primary merge gate.
+- CI status: GitHub Actions workflow configured with ruff (advisory), mypy (advisory), compileall validation, and full test suite (489 passed, 27 skipped) on every push and pull request. Ruff and mypy are advisory to allow incremental debt reduction; test execution is the primary merge gate.
 - Runtime surface status: health endpoint and CRUD endpoints for companies, contacts, websites, technologies, intent signals, intelligence scores, outreach messages, and agent runs exist; evidence API endpoints (by target, source, company, agent run, summary, detail) exist; workflow foundation and `score_refresh` exist; Agent Interface Foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are implemented; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Documentation status: `docs/project_state.md`, `docs/project_handoff.md`, `docs/codex_bootstrap.md`, `docs/workflows.md`, and `docs/agent_interface_design.md` reflect CRUD API completion, workflow foundation, `score_refresh`, Agent Interface Foundation, and Background Job Foundation.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
@@ -1305,11 +1330,11 @@ Objective:
 Status:
 
 - Completed.
-- All 5 Alembic migrations apply cleanly to PostgreSQL 18.x.
-- All 5 migrations downgrade and re-apply cleanly (full round-trip).
+- All 8 Alembic migrations apply cleanly to PostgreSQL 18.x.
+- All 8 migrations downgrade and re-apply cleanly (full round-trip).
 - Alembic `check` reports no new upgrade operations on PostgreSQL.
 - 24 dedicated PostgreSQL verification tests pass.
-- 284 existing SQLite tests pass with no regressions.
+- 489 total tests pass with no regressions.
 - Two migration fixes applied: `recreate="always"` → `recreate="auto"` in `20260531_0002`, `op.f()` wrapper added in `20260609_0003`.
 
 Dependencies:
@@ -1345,7 +1370,7 @@ Implementation:
 - Two jobs: `validate` (ruff advisory, mypy advisory, compileall) and `test` (SQLite upgrade, alembic check, SQLite pytest, PostgreSQL 18 service container with migrations and compatibility tests)
 - Ruff and mypy are in advisory mode (`continue-on-error: true`) to allow incremental debt reduction. Test execution is the primary merge gate. A future milestone will enforce all checks after pre-existing code quality issues are resolved.
 - Triggers on push and pull request to `main`
-- 330 total tests: 306 SQLite + 24 PostgreSQL
+- 489 passed, 27 skipped
 
 ### 14. Concrete Agent Implementation
 

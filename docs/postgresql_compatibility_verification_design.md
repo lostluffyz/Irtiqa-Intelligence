@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # PostgreSQL Compatibility Verification Design
 
 ## 1. Purpose

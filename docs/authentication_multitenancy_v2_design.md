@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Authentication & Multi-Tenancy v2 Design
 
 ## Executive Summary

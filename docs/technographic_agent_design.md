@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Technographic Agent: Architectural Design
 
 This document details the architectural design for the **Technographic Intelligence Agent**, the second concrete agent implemented on the Agent Interface Foundation.
