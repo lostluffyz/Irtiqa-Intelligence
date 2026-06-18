@@ -12,6 +12,7 @@ from app.api.v1.endpoints.intelligence import router as intelligence_router
 from app.api.v1.endpoints.intent_signals import router as intent_signals_router
 from app.api.v1.endpoints.intelligence_scores import router as intelligence_scores_router
 from app.api.v1.endpoints.jobs import router as jobs_router
+from app.api.v1.endpoints.leads import router as leads_router
 from app.api.v1.endpoints.organizations import router as organizations_router
 from app.api.v1.endpoints.outreach_messages import router as outreach_messages_router
 from app.api.v1.endpoints.technologies import router as technologies_router
@@ -33,3 +34,4 @@ router.include_router(intelligence_scores_router)
 router.include_router(outreach_messages_router)
 router.include_router(agent_runs_router)
 router.include_router(jobs_router)
+router.include_router(leads_router)

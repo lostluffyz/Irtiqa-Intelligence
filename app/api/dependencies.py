@@ -19,6 +19,7 @@ from app.services import (
     IntelligenceScoreService,
     IntentSignalService,
     JobService,
+    LeadRetrievalService,
     MembershipService,
     OrganizationService,
     OutreachMessageService,
@@ -89,6 +90,10 @@ def get_membership_service() -> MembershipService:
 
 def get_auth_service() -> AuthService:
     return AuthService()
+
+
+def get_lead_retrieval_service() -> LeadRetrievalService:
+    return LeadRetrievalService()
 
 
 # Reusable bearer security scheme for OpenAPI / Swagger UI.
