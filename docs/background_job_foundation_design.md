@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Background Job Foundation Design
 
 ## 1. Purpose

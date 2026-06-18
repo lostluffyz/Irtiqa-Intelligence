@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Personalization Agent Design
 
 ## Purpose

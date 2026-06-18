@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Multi-Tenancy Phase 2b: Auth Integration — Implementation Tasks
 
 ## Background

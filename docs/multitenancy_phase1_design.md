@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Multi-Tenancy Phase 1: Organization & Membership Design
 
 ## 1. Scope

@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Deep Scraper Agent: Architectural Design
 
 This document details the architectural design for the **Deep Scraper Agent**, the first concrete agent implemented on top of the Agent Interface Foundation.

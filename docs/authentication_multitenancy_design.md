@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Authentication & Multi-Tenancy Design
 
 ## 1. Goals

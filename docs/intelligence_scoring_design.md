@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Intelligence Scoring Agent Design
 
 ## 1. Architecture Overview

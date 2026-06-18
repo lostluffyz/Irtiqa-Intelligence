@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Intent Signal Agent: Architectural Design
 
 This document designs the Intent Signal Agent for Irtiqa Intelligence. It was checked against the current architecture before writing:

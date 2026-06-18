@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # Agent Interface Foundation: Refined Architectural Design
 
 This document details the refined architectural design for the **Agent Interface Foundation** of Irtiqa Intelligence, incorporating the architectural decisions made for async execution, run observability, and evidence capture.

@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED**
+
 # CI/CD Pipeline Design
 
 ## 1. Purpose

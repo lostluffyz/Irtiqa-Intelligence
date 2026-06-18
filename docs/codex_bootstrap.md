@@ -76,31 +76,50 @@ app/
 |   |-- technology.py
 |   |-- intent_signal.py
 |   |-- intelligence_score.py
-|   |-- job.py
 |   |-- outreach_message.py
-|   `-- agent_run.py
-|-- repositories/
-|   |-- base.py
-|   |-- company_repository.py
-|   |-- contact_repository.py
-|   |-- website_repository.py
-|   |-- technology_repository.py
-|   |-- intent_signal_repository.py
-|   |-- intelligence_score_repository.py
-|   |-- job_repository.py
-|   |-- outreach_message_repository.py
-|   `-- agent_run_repository.py
-`-- services/
-    |-- base.py
-    |-- company_service.py
-    |-- contact_service.py
-    |-- website_service.py
-    |-- technology_service.py
-    |-- intent_signal_service.py
-    |-- intelligence_score_service.py
-    |-- job_service.py
-    |-- outreach_message_service.py
-    `-- agent_run_service.py
+|   |-- agent_run.py
+|   |-- job.py
+|   |-- user.py
+|   |-- organization.py
+|   |-- membership.py
+|   |-- evidence_record.py
+|   |-- email_verification_token.py
+|   |-- password_reset_token.py
+|   |-- refresh_token.py
+|   `-- failed_login_attempt.py
+|   |-- repositories/
+|       |-- __init__.py
+|       |-- base.py
+|       |-- company_repository.py
+|       |-- contact_repository.py
+|       |-- website_repository.py
+|       |-- technology_repository.py
+|       |-- intent_signal_repository.py
+|       |-- intelligence_score_repository.py
+|       |-- outreach_message_repository.py
+|       |-- agent_run_repository.py
+|       |-- job_repository.py
+|       |-- evidence_repository.py
+|       |-- membership_repository.py
+|       |-- organization_repository.py
+|       `-- user_repository.py
+|   |-- services/
+|   |   |-- __init__.py
+|   |   |-- base.py
+|   |   |-- company_service.py
+|   |   |-- contact_service.py
+|   |   |-- website_service.py
+|   |   |-- technology_service.py
+|   |   |-- intent_signal_service.py
+|   |   |-- intelligence_score_service.py
+|   |   |-- outreach_message_service.py
+|   |   |-- agent_run_service.py
+|   |   |-- job_service.py
+|   |   |-- evidence_service.py
+|   |   |-- auth_service.py
+|   |   |-- membership_service.py
+|   |   |-- organization_service.py
+|   |   `-- lead_retrieval_service.py
 `-- agents/
     |-- __init__.py
     |-- base.py
@@ -108,17 +127,23 @@ app/
     |-- result.py
     |-- registry.py
     `-- errors.py
-`-- schemas/
-    |-- base.py
-    |-- company.py
-    |-- contact.py
-    |-- website.py
-    |-- technology.py
-    |-- intent_signal.py
-    |-- intelligence_score.py
-    |-- job.py
-    |-- outreach_message.py
-    `-- agent_run.py
+|   `-- schemas/
+|       |-- __init__.py
+|       |-- base.py
+|       |-- company.py
+|       |-- contact.py
+|       |-- website.py
+|       |-- technology.py
+|       |-- intent_signal.py
+|       |-- intelligence_score.py
+|       |-- outreach_message.py
+|       |-- agent_run.py
+|       |-- job.py
+|       |-- evidence.py
+|       |-- auth.py
+|       |-- membership.py
+|       |-- organization.py
+|       `-- lead.py
 `-- workflows/
     |-- base.py
     |-- context.py
@@ -147,9 +172,13 @@ database/migrations/
 |-- script.py.mako
 `-- versions/
     |-- 20260531_0001_initial_schema.py
-    `-- 20260531_0002_database_hardening.py
-    `-- 20260603_0003_add_website_content_columns.py
-    `-- 20260609_0003_add_jobs_table.py
+    |-- 20260531_0002_database_hardening.py
+    |-- 20260603_0003_add_website_content_columns.py
+    |-- 20260609_0003_add_jobs_table.py
+    |-- 20260611_0004_create_evidence_records.py
+    |-- 20260612_0005_create_auth_tables.py
+    |-- 20260613_0006_create_organizations_memberships.py
+    `-- 20260616_0007_add_organization_id_to_domain_tables.py
 ```
 
 Implemented tests:
@@ -262,7 +291,7 @@ Implemented:
 - Background Job Foundation: in-process job scheduling, execution, and monitoring for agents and workflows with `JobRunner`, `JobScheduler`, retry policy with exponential backoff and jitter, and REST API endpoints.
 - Repositories: isolated database access without commits.
 - Pytest foundation.
-- CI pipeline: GitHub Actions workflow with ruff (advisory), mypy (advisory), compileall validation, and SQLite + PostgreSQL 18 test suite (330 tests on every push/PR). Ruff and mypy are advisory during the current phase to allow incremental debt reduction.
+- CI pipeline: GitHub Actions workflow with ruff (advisory), mypy (advisory), compileall validation, and SQLite + PostgreSQL 18 test suite (489 passed, 27 skipped on every push/PR). Ruff and mypy are advisory during the current phase to allow incremental debt reduction.
 
 Not implemented:
 
@@ -272,7 +301,7 @@ Latest known full test result:
 
 ```text
 python -m pytest
-330 passed (306 SQLite + 24 PostgreSQL)
+489 passed, 27 skipped
 ```
 
 PostgreSQL verification tests:
@@ -295,7 +324,7 @@ No new upgrade operations detected.
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `330 passed` (306 SQLite + 24 PostgreSQL).
+- Current test count: `489 passed, 27 skipped`.
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
 - Architecture status: FastAPI skeleton, CRUD API Endpoints, database, repositories, services, schemas, workflow foundation, `score_refresh`, Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, logging, errors, and backup documentation are implemented.
 - Runtime surface status: health endpoint and CRUD endpoints exist; workflow foundation exists;
@@ -317,13 +346,21 @@ Implemented tables:
 
 - `companies`
 - `contacts`
-- `websites` (updated with `raw_html` and `extracted_text`)
+- `websites`
 - `technologies`
 - `intent_signals`
 - `intelligence_scores`
 - `outreach_messages`
+- `evidence_records`
 - `agent_runs`
 - `jobs`
+- `users`
+- `organizations`
+- `memberships`
+- `refresh_tokens`
+- `email_verification_tokens`
+- `password_reset_tokens`
+- `failed_login_attempts`
 
 Canonical names:
 
@@ -502,7 +539,7 @@ Do not:
 CI and quality gates are complete:
 
 - GitHub Actions workflow with two jobs: validate (ruff advisory, mypy advisory, compileall) and test (SQLite upgrade, alembic check, SQLite pytest, PostgreSQL 18 service container).
-- 330 total tests (306 SQLite + 24 PostgreSQL) on every push and pull request.
+- 489 passed, 27 skipped on every push and pull request.
 - Intelligence Pipeline Workflow: end-to-end orchestration chaining all 5 agents (Deep Scraper → Technographic → Intent Signal → Intelligence Scoring → Personalization) triggered via `POST /intelligence/pipeline`.
 
 ## Reference Documents
