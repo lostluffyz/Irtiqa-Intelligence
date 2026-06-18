@@ -85,18 +85,18 @@ def services(mock_company, mock_contact, mock_technology, mock_intent_signal, mo
     intent_service.list_by_contact.return_value = []
     
     score_service = MagicMock()
-    score_service.list_by_company.return_value = [mock_intelligence_score]
+    score_service.latest_for_company.return_value = mock_intelligence_score
     
     outreach_service = MagicMock()
-    outreach_service.create.side_effect = lambda schema: OutreachMessage(
+    outreach_service.create.side_effect = lambda **kw: OutreachMessage(
         id="66666666-6666-6666-6666-666666666666",
-        company_id=schema.company_id,
-        channel=schema.channel,
-        message_body=schema.message_body,
-        personalization_angle=schema.personalization_angle,
-        status=schema.status,
-        confidence=schema.confidence,
-        generated_at=schema.generated_at
+        company_id=kw.get("company_id", ""),
+        channel=kw.get("channel", ""),
+        message_body=kw.get("message_body", ""),
+        personalization_angle=kw.get("personalization_angle", ""),
+        status=kw.get("status", "draft"),
+        confidence=kw.get("confidence", 0.5),
+        generated_at=kw.get("generated_at", datetime.now(timezone.utc))
     )
     
     return {

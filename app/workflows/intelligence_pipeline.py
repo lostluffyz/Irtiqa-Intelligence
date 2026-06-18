@@ -63,6 +63,7 @@ class IntelligencePipelineWorkflow(Workflow):
             deep_context = AgentContext(
                 agent_name="deep_scraper",
                 company_id=normalized_company_id,
+                organization_id=context.organization_id,
                 workflow_name=WORKFLOW_NAME,
                 options=dict(
                     crawl_depth=context.options.get("crawl_depth", 2),
@@ -97,6 +98,7 @@ class IntelligencePipelineWorkflow(Workflow):
             tech_context = AgentContext(
                 agent_name="technographic",
                 company_id=normalized_company_id,
+                organization_id=context.organization_id,
                 workflow_name=WORKFLOW_NAME,
                 options=dict(context.options),
             )
@@ -127,6 +129,7 @@ class IntelligencePipelineWorkflow(Workflow):
             signal_context = AgentContext(
                 agent_name="intent_signal",
                 company_id=normalized_company_id,
+                organization_id=context.organization_id,
                 workflow_name=WORKFLOW_NAME,
                 options=dict(context.options),
             )
@@ -158,6 +161,7 @@ class IntelligencePipelineWorkflow(Workflow):
                 agent_name="intelligence_scoring_agent",
                 company_id=normalized_company_id,
                 contact_id=normalized_contact_id,
+                organization_id=context.organization_id,
                 workflow_name=WORKFLOW_NAME,
                 options=dict(context.options),
             )
@@ -189,6 +193,7 @@ class IntelligencePipelineWorkflow(Workflow):
                 agent_name="personalization_agent",
                 company_id=normalized_company_id,
                 contact_id=normalized_contact_id,
+                organization_id=context.organization_id,
                 workflow_name=WORKFLOW_NAME,
                 options=dict(context.options),
             )

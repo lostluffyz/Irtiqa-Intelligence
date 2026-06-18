@@ -55,14 +55,14 @@ class IntelligenceScoringAgent(BaseAgent):
                 raise ValueError(f"Contact {context.contact_id} not found.")
 
         technologies: list[Technology] = technology_service.list_by_company(context.company_id)
-        
+
         # We fetch intent signals for the company. If contact_id is present, we could filter by it,
         # but the scoring policy typically uses all intent signals for the company/contact context.
-        intent_signals: list[IntentSignal] = intent_signal_service.list_by_company(context.company_id)
+        intent_signals: list[IntentSignal] = intent_signal_service.list_by_company(context.company_id, organization_id=context.organization_id)
         if contact:
             # Optionally, we might merge contact-specific signals here if the service structure allowed,
             # but list_by_company gets the company level. Let's get contact level signals too if they exist.
-            contact_signals = intent_signal_service.list_by_contact(context.contact_id)
+            contact_signals = intent_signal_service.list_by_contact(context.contact_id, organization_id=context.organization_id)
             # Deduplicate by ID
             seen_ids = {s.id for s in intent_signals}
             for s in contact_signals:
@@ -92,11 +92,11 @@ class IntelligenceScoringAgent(BaseAgent):
             total_score=result.total_score,
             confidence=result.confidence,
             score_version=result.score_version,
-            primary_technology_id=result.primary_technology_id,
+            technology_id=result.primary_technology_id,
             rationale=result.rationale,
             scored_at=result.scored_at,
         )
-        score = intelligence_score_service.create(create_schema)
+        score = intelligence_score_service.create(organization_id=context.organization_id, **create_schema.model_dump())
 
         # 5. Return mapped output IDs
         logger.info(

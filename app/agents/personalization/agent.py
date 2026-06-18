@@ -61,9 +61,9 @@ class PersonalizationAgent(BaseAgent):
             contact = contact_service.get(context.contact_id)
 
         technologies: list[Technology] = technology_service.list_by_company(context.company_id)
-        intent_signals: list[IntentSignal] = intent_signal_service.list_by_company(context.company_id)
+        intent_signals: list[IntentSignal] = intent_signal_service.list_by_company(context.company_id, organization_id=context.organization_id)
         if contact:
-            contact_signals = intent_signal_service.list_by_contact(contact.id)
+            contact_signals = intent_signal_service.list_by_contact(contact.id, organization_id=context.organization_id)
             seen_ids = {s.id for s in intent_signals}
             for s in contact_signals:
                 if s.id not in seen_ids:
@@ -71,10 +71,9 @@ class PersonalizationAgent(BaseAgent):
                     seen_ids.add(s.id)
 
         # Fetch latest intelligence score
-        scores: list[IntelligenceScore] = intelligence_score_service.list_by_company(context.company_id)
-        latest_score: IntelligenceScore | None = None
-        if scores:
-            latest_score = sorted(scores, key=lambda s: s.scored_at, reverse=True)[0]
+        latest_score: IntelligenceScore | None = intelligence_score_service.latest_for_company(
+            context.company_id, organization_id=context.organization_id,
+        )
 
         # 3. Angle Selector
         primary_angle = "fit_driven"
@@ -155,7 +154,7 @@ class PersonalizationAgent(BaseAgent):
                 generated_at=now,
             )
             
-            created_message = outreach_message_service.create(create_schema)
+            created_message = outreach_message_service.create(organization_id=context.organization_id, **create_schema.model_dump())
             output_ids.append(created_message.id)
 
         # 6. Return mapped output IDs
@@ -163,12 +162,12 @@ class PersonalizationAgent(BaseAgent):
             "PersonalizationAgent completed successfully",
             extra={"outreach_messages_count": len(output_ids)},
         )
-        return {
-            "output_ids": {"outreach_messages": output_ids},
-            "summary": f"Generated {len(output_ids)} personalization variants.",
-            "stats": {
+        return AgentRunOutput(
+            output_ids={"outreach_messages": output_ids},
+            summary=f"Generated {len(output_ids)} personalization variants.",
+            stats={
                 "primary_angle": primary_angle,
                 "secondary_angle": secondary_angle,
                 "variants_created": len(output_ids),
-            }
-        }
+            },
+        )

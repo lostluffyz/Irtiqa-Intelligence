@@ -148,7 +148,7 @@ class IntentSignalAgent(BaseAgent):
 
         websites = website_service.list_by_company(context.company_id, limit=500)
         technologies = technology_service.list_by_company(context.company_id, limit=500)
-        existing_signals = intent_signal_service.list_by_company(context.company_id, limit=500)
+        existing_signals = intent_signal_service.list_by_company(context.company_id, organization_id=context.organization_id, limit=500)
         rules = rules_for_signal_types(signal_types)
         technology_contexts = [
             TechnologyContext(
@@ -238,6 +238,7 @@ class IntentSignalAgent(BaseAgent):
         intent_signal_ids: list[str] = []
         for candidate in selected_candidates:
             created = intent_signal_service.create(
+                organization_id=context.organization_id,
                 company_id=candidate.company_id,
                 contact_id=candidate.contact_id,
                 website_id=candidate.website_id,
