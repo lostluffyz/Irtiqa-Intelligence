@@ -20,8 +20,15 @@ from app.agents import (
 )
 from app.agents.registry import AgentRegistry
 from app.jobs import JobRunner, JobScheduler
-from app.services import JobService
+from app.services import (
+    AgentRunService,
+    CompanyService,
+    DiscoveryRunService,
+    DiscoverySearchService,
+    JobService,
+)
 from app.workflows.registry import WorkflowRegistry
+from app.workflows.discovery_pipeline import DiscoveryPipelineWorkflow
 from app.workflows.intelligence_pipeline import IntelligencePipelineWorkflow
 from app.workflows.score_refresh import ScoreRefreshWorkflow
 
@@ -83,11 +90,20 @@ def _build_lifespan(
         workflow_registry = WorkflowRegistry()
         workflow_registry.register(ScoreRefreshWorkflow)
         workflow_registry.register(IntelligencePipelineWorkflow)
+        workflow_registry.register(DiscoveryPipelineWorkflow)
+
+        workflow_services = {
+            "agent_run_service": AgentRunService(),
+            "company_service": CompanyService(),
+            "discovery_search_service": DiscoverySearchService(),
+            "discovery_run_service": DiscoveryRunService(),
+        }
 
         job_runner = JobRunner(
             job_service=job_service,
             agent_registry=agent_registry,
             workflow_registry=workflow_registry,
+            workflow_services=workflow_services,
             poll_interval=5.0,
         )
         scheduler = JobScheduler(job_runner, poll_interval=5.0)
