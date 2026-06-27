@@ -6,6 +6,7 @@ from app.api.v1.endpoints.agent_runs import router as agent_runs_router
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.companies import router as companies_router
 from app.api.v1.endpoints.contacts import router as contacts_router
+from app.api.v1.endpoints.discovery import router as discovery_router
 from app.api.v1.endpoints.evidence import router as evidence_router
 from app.api.v1.endpoints.health import router as health_router
 from app.api.v1.endpoints.intelligence import router as intelligence_router
@@ -24,6 +25,7 @@ router.include_router(auth_router)
 router.include_router(health_router)
 router.include_router(companies_router)
 router.include_router(contacts_router)
+router.include_router(discovery_router)
 router.include_router(evidence_router)
 router.include_router(intelligence_router)
 router.include_router(organizations_router)

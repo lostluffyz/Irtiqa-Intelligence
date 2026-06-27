@@ -15,6 +15,8 @@ from app.services import (
     AuthService,
     CompanyService,
     ContactService,
+    DiscoveryRunService,
+    DiscoverySearchService,
     EvidenceService,
     IntelligenceScoreService,
     IntentSignalService,
@@ -46,6 +48,14 @@ def get_company_service() -> CompanyService:
 
 def get_contact_service() -> ContactService:
     return ContactService()
+
+
+def get_discovery_search_service() -> DiscoverySearchService:
+    return DiscoverySearchService()
+
+
+def get_discovery_run_service() -> DiscoveryRunService:
+    return DiscoveryRunService()
 
 
 def get_website_service() -> WebsiteService:
