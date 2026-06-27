@@ -6,7 +6,6 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import inspect
-
 from app.models import Base
 
 
@@ -14,6 +13,8 @@ EXPECTED_TABLES = {
     "agent_runs",
     "companies",
     "contacts",
+    "discovery_runs",
+    "discovery_searches",
     "email_verification_tokens",
     "evidence_records",
     "failed_login_attempts",

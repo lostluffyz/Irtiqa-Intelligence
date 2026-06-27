@@ -2,6 +2,8 @@ from app.models.agent_run import AgentRun
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from app.models.company import Company
 from app.models.contact import Contact
+from app.models.discovery_run import DiscoveryRun
+from app.models.discovery_search import DiscoverySearch
 from app.models.email_verification_token import EmailVerificationToken
 from app.models.evidence_record import EvidenceRecord
 from app.models.failed_login_attempt import FailedLoginAttempt
@@ -22,6 +24,8 @@ __all__ = [
     "Base",
     "Company",
     "Contact",
+    "DiscoveryRun",
+    "DiscoverySearch",
     "EmailVerificationToken",
     "EvidenceRecord",
     "FailedLoginAttempt",

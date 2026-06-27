@@ -6,6 +6,8 @@ from app.models import Base
 from app.models.agent_run import AgentRun
 from app.models.company import Company
 from app.models.contact import Contact
+from app.models.discovery_run import DiscoveryRun
+from app.models.discovery_search import DiscoverySearch
 from app.models.email_verification_token import EmailVerificationToken
 from app.models.evidence_record import EvidenceRecord
 from app.models.failed_login_attempt import FailedLoginAttempt
@@ -27,6 +29,8 @@ def test_model_metadata_contains_current_schema_tables() -> None:
         "agent_runs",
         "companies",
         "contacts",
+        "discovery_runs",
+        "discovery_searches",
         "email_verification_tokens",
         "evidence_records",
         "failed_login_attempts",
@@ -49,6 +53,8 @@ def test_models_have_primary_key_and_timestamps() -> None:
         AgentRun,
         Company,
         Contact,
+        DiscoveryRun,
+        DiscoverySearch,
         EvidenceRecord,
         IntentSignal,
         IntelligenceScore,
@@ -72,6 +78,7 @@ def test_company_relationships_are_declared() -> None:
     assert set(relationships.keys()) == {
         "agent_runs",
         "contacts",
+        "discovery_search",
         "intent_signals",
         "intelligence_scores",
         "outreach_messages",
