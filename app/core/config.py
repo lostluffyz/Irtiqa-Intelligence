@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
@@ -57,10 +57,24 @@ class AuthSettings:
 
 
 @dataclass(frozen=True)
+class DiscoverySettings:
+    sec_edgar_user_agent: str = "IrtiqaIntelligence/1.0 (research@example.com)"
+    opencorporates_api_key: str | None = None
+    enabled_sources: str = "sec_edgar,google_news_rss,opencorporates"
+    request_timeout_seconds: float = 10.0
+    retry_count: int = 2
+
+    def is_source_enabled(self, source_name: str) -> bool:
+        enabled = {item.strip() for item in self.enabled_sources.split(",") if item.strip()}
+        return source_name in enabled
+
+
+@dataclass(frozen=True)
 class Settings:
     database: DatabaseSettings
     logging: LoggingSettings
     auth: AuthSettings
+    discovery: DiscoverySettings = field(default_factory=DiscoverySettings)
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -118,5 +132,18 @@ def get_settings() -> Settings:
             max_login_attempts=_env_int("MAX_LOGIN_ATTEMPTS", 5),
             login_lockout_minutes=_env_int("LOGIN_LOCKOUT_MINUTES", 15),
             dev_mode=_env_bool("DEV_MODE", False),
+        ),
+        discovery=DiscoverySettings(
+            sec_edgar_user_agent=os.getenv(
+                "DISCOVERY_SEC_EDGAR_USER_AGENT",
+                "IrtiqaIntelligence/1.0 (research@example.com)",
+            ),
+            opencorporates_api_key=os.getenv("DISCOVERY_OPENCORPORATES_API_KEY"),
+            enabled_sources=os.getenv(
+                "DISCOVERY_ENABLED_SOURCES",
+                "sec_edgar,google_news_rss,opencorporates",
+            ),
+            request_timeout_seconds=float(os.getenv("DISCOVERY_REQUEST_TIMEOUT_SECONDS", "10.0")),
+            retry_count=_env_int("DISCOVERY_RETRY_COUNT", 2),
         ),
     )
