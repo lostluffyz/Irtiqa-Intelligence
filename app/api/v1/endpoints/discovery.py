@@ -6,6 +6,7 @@ from app.api.dependencies import (
     get_current_organization,
     get_discovery_run_service,
     get_discovery_search_service,
+    get_job_service,
 )
 from app.core.tenant import TenantContext, require_role
 from app.schemas.discovery import (
@@ -16,7 +17,7 @@ from app.schemas.discovery import (
     DiscoverySearchRead,
     DiscoverySearchUpdate,
 )
-from app.services import DiscoveryRunService, DiscoverySearchService
+from app.services import DiscoveryRunService, DiscoverySearchService, JobService
 
 
 router = APIRouter(prefix="/discovery", tags=["discovery"])
@@ -112,13 +113,35 @@ def delete_discovery_search(
 def trigger_discovery_run(
     search_id: str,
     tenant: TenantContext = Depends(get_current_organization),
-    service: DiscoveryRunService = Depends(get_discovery_run_service),
+    run_service: DiscoveryRunService = Depends(get_discovery_run_service),
+    job_service: JobService = Depends(get_job_service),
 ) -> DiscoveryRunRead:
     require_role("member", tenant.role, "run discovery searches")
-    run = service.start_run(
+
+    # Progress Token pattern: create run immediately, execute async
+    run = run_service.start_run(
         organization_id=tenant.organization_id,
         search_id=search_id,
     )
+
+    # Schedule background workflow with the existing run_id
+    from app.workflows.context import WorkflowContext
+
+    context = WorkflowContext(
+        workflow_name="discovery_pipeline",
+        company_id=None,
+        contact_id=None,
+        organization_id=tenant.organization_id,
+        options={
+            "discovery_search_id": search_id,
+            "discovery_run_id": run.id,
+        },
+    )
+    job_service.schedule_workflow(
+        name="discovery_pipeline",
+        context=context,
+    )
+
     return DiscoveryRunRead.model_validate(run)
 
 

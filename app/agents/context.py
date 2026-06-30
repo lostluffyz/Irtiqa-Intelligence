@@ -12,8 +12,9 @@ class AgentContext(IrtiqaSchema):
     """Immutable execution context passed to agents.
 
     Follows the same frozen-options pattern as ``WorkflowContext``.
-    ``company_id`` is always required because every agent operates
-    within the scope of a target company.
+    Most agents require ``company_id`` because they operate within the scope
+    of a target company. Organization-scoped agents (e.g., DiscoveryAgent)
+    may use ``organization_id`` alone.
     """
 
     model_config = ConfigDict(
@@ -23,9 +24,9 @@ class AgentContext(IrtiqaSchema):
     )
 
     agent_name: str = Field(min_length=1, max_length=150)
-    company_id: str = Field(min_length=36, max_length=36)
+    company_id: str | None = Field(default=None, min_length=36, max_length=36)
     contact_id: str | None = Field(default=None, min_length=36, max_length=36)
-    organization_id: str | None = Field(default=None, min_length=36, max_length=36)  # NEW
+    organization_id: str | None = Field(default=None, min_length=36, max_length=36)
     workflow_name: str | None = Field(default=None, min_length=1, max_length=150)
     correlation_id: str | None = Field(default=None, min_length=1, max_length=100)
     options: MappingProxyType[str, Any] = Field(default_factory=lambda: MappingProxyType({}))
@@ -40,7 +41,7 @@ class AgentContext(IrtiqaSchema):
         return MappingProxyType(dict(value))
 
     @model_validator(mode="after")
-    def require_company(self) -> AgentContext:
-        if not self.company_id or not self.company_id.strip():
-            raise ValueError("Agent context requires a non-blank company_id.")
+    def require_target(self) -> AgentContext:
+        if self.organization_id is None and self.company_id is None and self.contact_id is None:
+            raise ValueError("Agent context requires organization_id, company_id, or contact_id.")
         return self

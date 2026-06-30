@@ -45,8 +45,15 @@ class DiscoveryPipelineWorkflow(Workflow):
             self._service("company_service", CompanyService)
 
             search = search_service.get_for_organization(search_id, organization_id=organization_id)
-            run = run_service.start_run(organization_id=organization_id, search_id=search.id)
-            run_id = run.id
+
+            # Support resuming an existing run (Progress Token pattern)
+            existing_run_id = context.options.get("discovery_run_id")
+            if existing_run_id and isinstance(existing_run_id, str):
+                run = run_service.get_run(existing_run_id, organization_id=organization_id)
+                run_id = run.id
+            else:
+                run = run_service.start_run(organization_id=organization_id, search_id=search.id)
+                run_id = run.id
 
             agent_context = AgentContext(
                 agent_name=DISCOVERY_AGENT_NAME,

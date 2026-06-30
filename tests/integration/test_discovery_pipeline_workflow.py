@@ -379,3 +379,176 @@ def test_discovery_pipeline_records_failure_path(
     assert persisted_search is not None
     assert persisted_search.total_discovered == 0
     assert all(company.domain != "failure.example" for company in companies)
+
+
+def test_discovery_pipeline_resumes_existing_run_when_provided(
+    service_database: sessionmaker[Session],
+    org_id: str,
+) -> None:
+    """Verify that workflow resumes an existing run instead of creating a new one (Progress Token pattern)."""
+    company_service = CompanyService()
+    search_service = DiscoverySearchService()
+    run_service = DiscoveryRunService()
+    _seed_company(company_service, organization_id=org_id, domain="anchor.example")
+    search = _create_search(search_service, organization_id=org_id)
+    placeholder = _seed_company(company_service, organization_id=org_id, domain="placeholder.example", name="Placeholder")
+
+    # Pre-create a run (simulating API endpoint behavior)
+    existing_run = run_service.start_run(organization_id=org_id, search_id=search.id)
+
+    runner = _runner(
+        providers=[_Provider("sec_edgar", [_company(domain="resume.example")])],
+        company_service=company_service,
+        discovery_search_service=search_service,
+        discovery_run_service=run_service,
+    )
+
+    # Workflow context includes the existing run_id
+    context = WorkflowContext(
+        workflow_name="discovery_pipeline",
+        company_id=placeholder.id,
+        organization_id=org_id,
+        options={
+            "discovery_search_id": search.id,
+            "discovery_run_id": existing_run.id,
+        },
+    )
+
+    result = runner.run(context)
+
+    assert result.status == WorkflowStatus.SUCCEEDED
+    assert len(result.output_ids["companies"]) == 1
+    assert result.output_ids["discovery_runs"] == [existing_run.id]
+
+    # Verify only one run exists (no duplicate creation)
+    with service_database() as session:
+        runs = session.query(DiscoveryRun).filter(DiscoveryRun.organization_id == org_id).all()
+
+    assert len(runs) == 1
+    assert runs[0].id == existing_run.id
+    assert runs[0].status == "succeeded"
+
+
+def test_discovery_pipeline_creates_run_when_not_provided(
+    service_database: sessionmaker[Session],
+    org_id: str,
+) -> None:
+    """Verify that workflow creates a run when run_id is not provided (legacy/direct invocation)."""
+    company_service = CompanyService()
+    search_service = DiscoverySearchService()
+    run_service = DiscoveryRunService()
+    _seed_company(company_service, organization_id=org_id, domain="anchor.example")
+    search = _create_search(search_service, organization_id=org_id)
+    placeholder = _seed_company(company_service, organization_id=org_id, domain="placeholder.example", name="Placeholder")
+
+    runner = _runner(
+        providers=[_Provider("sec_edgar", [_company(domain="direct.example")])],
+        company_service=company_service,
+        discovery_search_service=search_service,
+        discovery_run_service=run_service,
+    )
+
+    # Workflow context WITHOUT run_id (old behavior)
+    context = WorkflowContext(
+        workflow_name="discovery_pipeline",
+        company_id=placeholder.id,
+        organization_id=org_id,
+        options={
+            "discovery_search_id": search.id,
+            # No discovery_run_id
+        },
+    )
+
+    result = runner.run(context)
+
+    assert result.status == WorkflowStatus.SUCCEEDED
+    assert len(result.output_ids["companies"]) == 1
+
+    # Verify run was created by the workflow
+    with service_database() as session:
+        runs = session.query(DiscoveryRun).filter(DiscoveryRun.organization_id == org_id).all()
+
+    assert len(runs) == 1
+    assert runs[0].status == "succeeded"
+
+
+def test_discovery_pipeline_validates_existing_run_organization_id(
+    service_database: sessionmaker[Session],
+    org_id: str,
+    other_org_id: str,
+) -> None:
+    """Verify that workflow enforces tenant isolation when resuming a run."""
+    company_service = CompanyService()
+    search_service = DiscoverySearchService()
+    run_service = DiscoveryRunService()
+    _seed_company(company_service, organization_id=org_id, domain="anchor.example")
+    search = _create_search(search_service, organization_id=org_id)
+    placeholder = _seed_company(company_service, organization_id=org_id, domain="placeholder.example", name="Placeholder")
+
+    # Create a run in the OTHER organization
+    other_search = _create_search(search_service, organization_id=other_org_id, name="Other Search")
+    other_run = run_service.start_run(organization_id=other_org_id, search_id=other_search.id)
+
+    runner = _runner(
+        providers=[_Provider("sec_edgar", [_company(domain="isolated.example")])],
+        company_service=company_service,
+        discovery_search_service=search_service,
+        discovery_run_service=run_service,
+    )
+
+    # Attempt to resume a run from another organization
+    context = WorkflowContext(
+        workflow_name="discovery_pipeline",
+        company_id=placeholder.id,
+        organization_id=org_id,
+        options={
+            "discovery_search_id": search.id,
+            "discovery_run_id": other_run.id,  # Wrong org
+        },
+    )
+
+    result = runner.run(context)
+
+    # Workflow should fail due to tenant isolation
+    assert result.status == WorkflowStatus.FAILED
+    assert result.error is not None
+
+
+def test_discovery_pipeline_supports_organization_only_context(
+    service_database: sessionmaker[Session],
+    org_id: str,
+) -> None:
+    """Verify that workflow supports organization-only context without company_id or contact_id."""
+    company_service = CompanyService()
+    search_service = DiscoverySearchService()
+    run_service = DiscoveryRunService()
+    search = _create_search(search_service, organization_id=org_id)
+
+    runner = _runner(
+        providers=[_Provider("sec_edgar", [_company(domain="org-only.example")])],
+        company_service=company_service,
+        discovery_search_service=search_service,
+        discovery_run_service=run_service,
+    )
+
+    # Workflow context with ONLY organization_id (no company_id/contact_id)
+    context = WorkflowContext(
+        workflow_name="discovery_pipeline",
+        company_id=None,
+        contact_id=None,
+        organization_id=org_id,
+        options={
+            "discovery_search_id": search.id,
+        },
+    )
+
+    result = runner.run(context)
+
+    assert result.status == WorkflowStatus.SUCCEEDED
+    assert len(result.output_ids["companies"]) == 1
+
+    with service_database() as session:
+        runs = session.query(DiscoveryRun).filter(DiscoveryRun.organization_id == org_id).all()
+
+    assert len(runs) == 1
+    assert runs[0].status == "succeeded"
