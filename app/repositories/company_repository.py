@@ -16,6 +16,15 @@ class CompanyRepository(BaseRepository[Company]):
         statement = self._apply_tenant_filter(statement, organization_id)
         return self.scalar_one_or_none(statement)
 
+    def get_existing_domains(self, domains: list[str], organization_id: str) -> set[str]:
+        """Batch-check which domains already exist for the organization."""
+        if not domains:
+            return set()
+        statement = select(Company.domain).where(Company.domain.in_(domains))
+        statement = self._apply_tenant_filter(statement, organization_id)
+        existing = self.session.execute(statement).scalars().all()
+        return set(existing)
+
     def search_by_name(self, name: str, *, organization_id: str, limit: int = 50) -> Sequence[Company]:
         statement = select(Company).where(Company.name.ilike(f"%{name}%"))
         statement = self._apply_tenant_filter(statement, organization_id)

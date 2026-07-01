@@ -26,6 +26,15 @@ class CompanyService(BaseService[Company, CompanyRepository]):
 
         return self._run_in_transaction("get_by_domain", operation)
 
+    def get_existing_domains(self, domains: list[str], organization_id: str) -> set[str]:
+        """Batch-check which domains already exist for the organization."""
+        self._validate_identifier(organization_id, field_name="organization_id")
+
+        def operation(session: Session) -> set[str]:
+            return self._repository(session).get_existing_domains(domains, organization_id)
+
+        return self._run_in_transaction("get_existing_domains", operation)
+
     def search_by_name(self, name: str, *, organization_id: str, limit: int = 50) -> Sequence[Company]:
         self._validate_identifier(name, field_name="name")
         self._validate_limit(limit)

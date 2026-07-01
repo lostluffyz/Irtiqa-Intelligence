@@ -112,29 +112,30 @@ Current status:
 - Intelligence Scoring Agent is complete.
 - Personalization Agent is complete.
 - Task 12, Background Job Foundation, is complete.
-- Current full test suite result is `489 passed` (27 skipped PostgreSQL-only).
+- Lead Discovery Engine is complete (Discovery Agent, DiscoveryPipelineWorkflow, discovery API endpoints, background execution, production hardening).
+- Current full test suite result is `633 passed` (27 skipped PostgreSQL-only).
 - Evidence records system implemented with dedicated `evidence_records` table, service, API, and agent integration.
 - Intelligence Pipeline workflow implemented: chains all 5 agents (Deep Scraper → Technographic → Intent Signal → Intelligence Scoring → Personalization) into a single orchestrated run triggered via API.
 - Alembic schema drift check reports no new upgrade operations after upgrading to head.
 - Generated artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` should remain uncommitted.
-- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are complete. Background Job Foundation is complete. Lead Retrieval API is complete. Scraping orchestration, frontend, and external integrations have not been implemented.
+- The full CRUD API milestone is complete. Workflow foundation and `score_refresh` exist. Agent Interface Foundation, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent are complete. Background Job Foundation is complete. Lead Retrieval API is complete. Lead Discovery Engine is complete. Scraping orchestration, frontend, and external integrations have not been implemented.
 
 ## Repository Health Summary
 
 Current health:
 
 - Foundation status: healthy.
-- Current test count: `489 passed` (27 skipped PostgreSQL-only).
+- Current test count: `633 passed` (27 skipped PostgreSQL-only).
 - Schema drift status: clean after upgrading the local SQLite database to Alembic head.
-- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Background Job Foundation, Evidence Records System, Intelligence Pipeline Workflow, Multi-Tenancy Phase 1 (Organization & Membership), and Lead Retrieval API are implemented.
-- Runtime surface status: health endpoint and CRUD endpoints for all models exist; Lead Retrieval endpoint exists; workflow foundation and `score_refresh` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, and Personalization Agent exist; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
+- Architecture status: API routes, database, repositories, services, schemas, workflows, agent interface, Deep Scraper Agent, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, Discovery Agent, Background Job Foundation, Evidence Records System, Intelligence Pipeline Workflow, Discovery Pipeline Workflow, Multi-Tenancy Phase 1 (Organization & Membership), and Lead Retrieval API are implemented.
+- Runtime surface status: health endpoint and CRUD endpoints for all models exist; Lead Retrieval endpoint exists; Discovery API endpoints exist; workflow foundation, `score_refresh`, `intelligence_pipeline`, and `discovery_pipeline` exist; agent foundation exists; Deep Scraper, Technographic Agent, Intent Signal Agent, Intelligence Scoring Agent, Personalization Agent, and Discovery Agent exist; Background Job Foundation with job scheduling, execution, and monitoring APIs exist.
 - Artifact status: generated local artifacts such as `database/irtiqa.db`, `.pytest_cache/`, and `__pycache__/` must remain uncommitted.
-- CI status: GitHub Actions workflow configured with ruff, mypy, compileall validation and full test suite (489 passed, 27 skipped PostgreSQL-only) on every push and pull request.
+- CI status: GitHub Actions workflow configured with ruff, mypy, compileall validation and full test suite (633 passed, 27 skipped PostgreSQL-only) on every push and pull request.
 - Next milestone: external integrations and orchestration.
 
 ## Database Schema
 
-The implemented schema contains seventeen tables:
+The implemented schema contains nineteen tables:
 
 - `companies`
 - `contacts`
@@ -153,6 +154,8 @@ The implemented schema contains seventeen tables:
 - `email_verification_tokens`
 - `password_reset_tokens`
 - `failed_login_attempts`
+- `discovery_searches`
+- `discovery_runs`
 
 Relationship summary:
 

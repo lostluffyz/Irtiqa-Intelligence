@@ -11,6 +11,8 @@ from sqlalchemy import select
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
+    from app.models.discovery_run import DiscoveryRun
+    from app.models.discovery_search import DiscoverySearch
     from app.models.membership import Membership
 
 
@@ -35,9 +37,17 @@ class Organization(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="organization",
         cascade="all, delete-orphan",
     )
+    discovery_searches: Mapped[list[DiscoverySearch]] = relationship(
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+    discovery_runs: Mapped[list[DiscoveryRun]] = relationship(
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
 
 
-# ── Slug generation ──────────────────────────────────────────────────────────
+# -- Slug generation ---------------------------------------------------------
 
 
 def generate_slug(name: str) -> str:

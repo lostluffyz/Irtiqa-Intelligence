@@ -2,6 +2,8 @@ from app.services.agent_run_service import AgentRunService
 from app.services.auth_service import AuthService
 from app.services.base import BaseService
 from app.services.company_service import CompanyService
+from app.services.discovery_run_service import DiscoveryRunService
+from app.services.discovery_search_service import DiscoverySearchService
 from app.services.evidence_service import EvidenceService
 from app.services.contact_service import ContactService
 from app.services.intent_signal_service import IntentSignalService
@@ -20,6 +22,8 @@ __all__ = [
     "BaseService",
     "CompanyService",
     "ContactService",
+    "DiscoveryRunService",
+    "DiscoverySearchService",
     "EvidenceService",
     "IntentSignalService",
     "IntelligenceScoreService",

@@ -34,6 +34,6 @@ class WorkflowContext(IrtiqaSchema):
 
     @model_validator(mode="after")
     def require_target(self) -> WorkflowContext:
-        if self.company_id is None and self.contact_id is None:
-            raise ValueError("Workflow context requires company_id or contact_id.")
+        if self.organization_id is None and self.company_id is None and self.contact_id is None:
+            raise ValueError("Workflow context requires organization_id, company_id, or contact_id.")
         return self

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text
+from sqlalchemy import CheckConstraint, Float, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -10,6 +10,7 @@ from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 if TYPE_CHECKING:
     from app.models.agent_run import AgentRun
     from app.models.contact import Contact
+    from app.models.discovery_search import DiscoverySearch
     from app.models.intent_signal import IntentSignal
     from app.models.intelligence_score import IntelligenceScore
     from app.models.outreach_message import OutreachMessage
@@ -23,6 +24,10 @@ class Company(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint(
             "status IN ('active', 'needs_review', 'archived')",
             name="status_allowed",
+        ),
+        CheckConstraint(
+            "discovery_score >= 0.0 AND discovery_score <= 1.0",
+            name="ck_companies_discovery_score",
         ),
         Index("ix_companies_name", "name"),
         Index("ix_companies_industry", "industry"),
@@ -45,7 +50,22 @@ class Company(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text)
     linkedin_url: Mapped[str | None] = mapped_column(String(500))
     status: Mapped[str] = mapped_column(String(50), default="active", nullable=False)
+    discovered_via: Mapped[str | None] = mapped_column(String(100))
+    discovery_search_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("discovery_searches.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    discovery_score: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        nullable=False,
+    )
 
+    discovery_search: Mapped[DiscoverySearch | None] = relationship(
+        back_populates="companies",
+        foreign_keys=[discovery_search_id],
+    )
     contacts: Mapped[list[Contact]] = relationship(
         back_populates="company",
         cascade="all, delete-orphan",

@@ -1,5 +1,18 @@
 from app.schemas.agent_run import AgentRunCreate, AgentRunList, AgentRunRead, AgentRunUpdate
 from app.schemas.company import CompanyCreate, CompanyList, CompanyRead, CompanyUpdate
+from app.schemas.discovery import (
+    DiscoveryRunCreate,
+    DiscoveryRunList,
+    DiscoveryRunQueryParams,
+    DiscoveryRunRead,
+    DiscoveryRunUpdate,
+    DiscoverySearchCreate,
+    DiscoverySearchCriteria,
+    DiscoverySearchList,
+    DiscoverySearchQueryParams,
+    DiscoverySearchRead,
+    DiscoverySearchUpdate,
+)
 from app.schemas.evidence import EvidenceItem, EvidenceList, EvidenceRead, EvidenceSummary
 from app.schemas.auth import OrganizationSummary
 from app.schemas.contact import ContactCreate, ContactList, ContactRead, ContactUpdate
@@ -48,6 +61,17 @@ __all__ = [
     "CompanyList",
     "CompanyRead",
     "CompanyUpdate",
+    "DiscoveryRunCreate",
+    "DiscoveryRunList",
+    "DiscoveryRunQueryParams",
+    "DiscoveryRunRead",
+    "DiscoveryRunUpdate",
+    "DiscoverySearchCreate",
+    "DiscoverySearchCriteria",
+    "DiscoverySearchList",
+    "DiscoverySearchQueryParams",
+    "DiscoverySearchRead",
+    "DiscoverySearchUpdate",
     "EvidenceItem",
     "EvidenceList",
     "EvidenceRead",
