@@ -140,12 +140,15 @@ class DiscoveryRunService:
         self._validate_identifier(organization_id, field_name="organization_id")
         self._validate_identifier(error_message, field_name="error_message")
 
+        # Truncate error message to prevent database column overflow
+        truncated_error = self._truncate_error_message(error_message)
+
         def operation(session: Session) -> DiscoveryRun:
             run = self._get_run_for_organization(session, run_id, organization_id)
             self._require_running(run, operation_name="fail_run")
             run.status = "failed"
             run.finished_at = datetime.now(timezone.utc)
-            run.error_message = error_message
+            run.error_message = truncated_error
             session.flush()
             return run
 
@@ -387,3 +390,10 @@ class DiscoveryRunService:
                     "status": status,
                 },
             )
+
+    @staticmethod
+    def _truncate_error_message(error_message: str, max_length: int = 2000) -> str:
+        """Truncate error message to prevent database column overflow."""
+        if len(error_message) <= max_length:
+            return error_message
+        return error_message[: max_length - 3] + "..."

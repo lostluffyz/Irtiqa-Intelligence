@@ -173,7 +173,7 @@ class DiscoverySearchService(BaseService[DiscoverySearch, DiscoverySearchReposit
                 criteria_model = DiscoverySearchCriteria.model_validate(json.loads(criteria))
             else:
                 criteria_model = DiscoverySearchCriteria.model_validate(criteria)
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
             raise ValidationError(
                 "criteria must be valid JSON.",
                 details={"service": self.__class__.__name__, "field": "criteria"},

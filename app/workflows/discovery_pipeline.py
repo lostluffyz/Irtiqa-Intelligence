@@ -50,6 +50,16 @@ class DiscoveryPipelineWorkflow(Workflow):
             existing_run_id = context.options.get("discovery_run_id")
             if existing_run_id and isinstance(existing_run_id, str):
                 run = run_service.get_run(existing_run_id, organization_id=organization_id)
+                # Validate run is in correct state for resumption
+                if run.status != "running":
+                    raise WorkflowError(
+                        f"Cannot resume discovery run with status '{run.status}' (expected 'running').",
+                        details={
+                            "workflow_name": self.name,
+                            "run_id": run.id,
+                            "status": run.status,
+                        },
+                    )
                 run_id = run.id
             else:
                 run = run_service.start_run(organization_id=organization_id, search_id=search.id)
@@ -152,6 +162,18 @@ class DiscoveryPipelineWorkflow(Workflow):
         except WorkflowError:
             raise
         except IrtiqaError as exc:
+            self.logger.error(
+                "Discovery pipeline failed with IrtiqaError",
+                extra={
+                    "workflow_name": self.name,
+                    "organization_id": organization_id,
+                    "search_id": search_id,
+                    "run_id": run_id,
+                    "error_code": exc.code,
+                    "error_type": exc.__class__.__name__,
+                },
+                exc_info=True,
+            )
             self._mark_failed(run_id, organization_id, exc)
             raise WorkflowError(
                 "Discovery pipeline failed.",
@@ -165,6 +187,17 @@ class DiscoveryPipelineWorkflow(Workflow):
                 cause=exc,
             ) from exc
         except Exception as exc:
+            self.logger.error(
+                "Discovery pipeline failed unexpectedly",
+                extra={
+                    "workflow_name": self.name,
+                    "organization_id": organization_id,
+                    "search_id": search_id,
+                    "run_id": run_id,
+                    "error_type": exc.__class__.__name__,
+                },
+                exc_info=True,
+            )
             error = WorkflowError(
                 "Unexpected discovery pipeline failure.",
                 details={

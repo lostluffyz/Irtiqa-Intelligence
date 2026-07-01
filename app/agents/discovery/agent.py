@@ -115,9 +115,12 @@ class DiscoveryAgent(BaseAgent):
         evidence: list[EvidenceItem] = []
         skipped_existing = 0
 
+        # Batch-load existing companies to avoid N+1 queries
+        candidate_domains = [c.domain for c in candidates]
+        existing_domains = self._get_existing_domains(company_service, candidate_domains, organization_id)
+
         for candidate in candidates:
-            existing = company_service.get_by_domain(candidate.domain, organization_id=organization_id)
-            if existing is not None:
+            if candidate.domain in existing_domains:
                 skipped_existing += 1
                 continue
 
@@ -329,3 +332,14 @@ class DiscoveryAgent(BaseAgent):
         if isinstance(value, str) and value.strip():
             return value.strip()
         return None
+
+    def _get_existing_domains(
+        self,
+        company_service: CompanyService,
+        domains: list[str],
+        organization_id: str,
+    ) -> set[str]:
+        """Batch-load existing company domains to avoid N+1 queries."""
+        if not domains:
+            return set()
+        return company_service.get_existing_domains(domains, organization_id)

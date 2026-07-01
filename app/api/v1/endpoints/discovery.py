@@ -8,6 +8,7 @@ from app.api.dependencies import (
     get_discovery_search_service,
     get_job_service,
 )
+from app.core.logging import get_logger
 from app.core.tenant import TenantContext, require_role
 from app.schemas.discovery import (
     DiscoveryRunList,
@@ -21,6 +22,7 @@ from app.services import DiscoveryRunService, DiscoverySearchService, JobService
 
 
 router = APIRouter(prefix="/discovery", tags=["discovery"])
+logger = get_logger("api.discovery")
 
 
 @router.get("/searches", response_model=DiscoverySearchList)
@@ -125,22 +127,50 @@ def trigger_discovery_run(
     )
 
     # Schedule background workflow with the existing run_id
-    from app.workflows.context import WorkflowContext
+    # If job scheduling fails, mark run as failed to prevent orphaned runs
+    try:
+        from app.workflows.context import WorkflowContext
 
-    context = WorkflowContext(
-        workflow_name="discovery_pipeline",
-        company_id=None,
-        contact_id=None,
-        organization_id=tenant.organization_id,
-        options={
-            "discovery_search_id": search_id,
-            "discovery_run_id": run.id,
-        },
-    )
-    job_service.schedule_workflow(
-        name="discovery_pipeline",
-        context=context,
-    )
+        context = WorkflowContext(
+            workflow_name="discovery_pipeline",
+            company_id=None,
+            contact_id=None,
+            organization_id=tenant.organization_id,
+            options={
+                "discovery_search_id": search_id,
+                "discovery_run_id": run.id,
+            },
+        )
+        job_service.schedule_workflow(
+            name="discovery_pipeline",
+            context=context,
+        )
+        logger.info(
+            "Discovery run scheduled",
+            extra={
+                "run_id": run.id,
+                "search_id": search_id,
+                "organization_id": tenant.organization_id,
+            },
+        )
+    except Exception as exc:
+        logger.error(
+            "Failed to schedule discovery job",
+            extra={
+                "run_id": run.id,
+                "search_id": search_id,
+                "organization_id": tenant.organization_id,
+                "error_type": exc.__class__.__name__,
+            },
+            exc_info=True,
+        )
+        # Mark run as failed if job scheduling fails
+        run_service.fail_run(
+            run.id,
+            organization_id=tenant.organization_id,
+            error_message=f"Failed to schedule discovery job: {exc.__class__.__name__}",
+        )
+        raise
 
     return DiscoveryRunRead.model_validate(run)
 
