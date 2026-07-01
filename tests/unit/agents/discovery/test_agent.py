@@ -94,8 +94,9 @@ def _services(
     agent_run_service.mark_failed.return_value = agent_run
 
     company_service = MagicMock()
-    company_service.get_by_domain.side_effect = (
-        lambda domain, organization_id: MagicMock(id="existing") if domain == existing_domain else None
+    # Mock batch domain checking (Commit 12 optimization)
+    company_service.get_existing_domains.side_effect = (
+        lambda domains, organization_id: {existing_domain} if existing_domain and existing_domain in domains else set()
     )
     created_ids: list[str] = []
 
