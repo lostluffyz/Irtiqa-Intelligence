@@ -1,19 +1,130 @@
 # Agent Architecture
 
-Irtiqa Intelligence is designed around specialized agents that produce structured intelligence for companies and contacts. This document describes the intended agent responsibilities while staying aligned with the current implemented database schema.
+Irtiqa Intelligence is designed around specialized agents that produce structured intelligence for companies and contacts.
 
-All five core agents (Deep Scraper, Technographic Intelligence, Intent Signal, Intelligence Scoring, and Personalization) have been fully implemented. The `IntelligencePipelineWorkflow` chains all 5 agents into a single orchestrated run. The persistence layer supports agent outputs through these tables:
+> **Quick Links:**
+> - [Architecture Overview](architecture_overview.md) — System-wide patterns
+> - [Workflow System](workflows.md) — Multi-agent orchestration
+> - [Agent Interface Design](agent_interface_design.md) — BaseAgent pattern details
 
-- `companies`
-- `contacts`
-- `websites`
-- `technologies`
-- `intent_signals`
-- `intelligence_scores`
-- `outreach_messages`
-- `evidence_records`
-- `agent_runs`
-- `jobs`
+---
+
+## Overview
+
+**6 Production Agents:**
+1. **Deep Scraper** — Web content extraction
+2. **Technographic** — Technology detection (40+ signatures)
+3. **Intent Signal** — Buying signal detection (8 families)
+4. **Intelligence Scoring** — Multi-factor lead scoring
+5. **Personalization** — Outreach message generation
+6. **Discovery** — ICP-based company discovery
+
+All agents are fully implemented. The `IntelligencePipelineWorkflow` chains agents 1-5 into an orchestrated run. The `DiscoveryPipelineWorkflow` uses agent 6 for company discovery.
+
+**Persistence Layer:** Agents write to 11 tables via repositories:
+- `companies`, `contacts`, `websites`
+- `technologies`, `intent_signals`, `intelligence_scores`, `outreach_messages`
+- `evidence_records`, `agent_runs`, `jobs`
+- `discovery_searches`, `discovery_runs`
+
+---
+
+## Agent Dependency Graph
+
+```mermaid
+graph TD
+    subgraph IntelligencePipeline["Intelligence Pipeline (Sequential)"]
+        DeepScraper[1. Deep Scraper<br/>Web Scraping] --> Techno[2. Technographic<br/>Tech Detection]
+        Techno --> Intent[3. Intent Signal<br/>Buying Signals]
+        Intent --> Score[4. Intelligence Scoring<br/>Lead Scoring]
+        Score --> Person[5. Personalization<br/>Outreach Generation]
+    end
+    
+    subgraph DiscoveryPipeline["Discovery Pipeline (Independent)"]
+        Discovery[6. Discovery Agent<br/>Company Discovery]
+    end
+    
+    Input[Company Domain + Context] --> DeepScraper
+    Input --> Discovery
+    
+    DeepScraper -->|raw_html + extracted_text| Techno
+    Techno -->|detected technologies| Intent
+    Intent -->|intent signals| Score
+    Score -->|intelligence score| Person
+    Person -->|outreach messages| Output[Intelligence Complete]
+    
+    Discovery -->|discovered companies| DiscOutput[Companies for Review]
+    
+    style DeepScraper fill:#e1f5ff
+    style Techno fill:#fff4e1
+    style Intent fill:#ffe1e1
+    style Score fill:#f0e1ff
+    style Person fill:#e1ffe1
+    style Discovery fill:#ffe1f5
+```
+
+### Pipeline Dependencies
+
+| Agent | Requires Output From | Produces | Used By |
+|-------|---------------------|----------|---------|
+| Deep Scraper | None (entry point) | `websites` (HTML + text) | Technographic |
+| Technographic | Deep Scraper | `technologies` | Intent Signal, Scoring |
+| Intent Signal | Technographic, Deep Scraper | `intent_signals` | Scoring |
+| Intelligence Scoring | Intent Signal, Technographic | `intelligence_scores` | Personalization |
+| Personalization | Intelligence Scoring | `outreach_messages` | End user |
+| Discovery | None (parallel) | `companies` (discovered) | Intelligence Pipeline (manual trigger) |
+
+---
+
+## BaseAgent Execution Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant Caller as Workflow/Service
+    participant Base as BaseAgent.execute()
+    participant Subclass as Agent._run()
+    participant Evidence as _record_evidence()
+    participant DB as Database
+    
+    Caller->>Base: execute(context)
+    
+    Note over Base: Create agent_run record
+    Base->>DB: INSERT INTO agent_runs (status=pending)
+    
+    Base->>Base: _validate(context)
+    alt Validation Fails
+        Base->>DB: UPDATE agent_runs SET status=failed
+        Base-->>Caller: AgentResult(status=failed)
+    end
+    
+    Base->>DB: UPDATE agent_runs SET status=running
+    Base->>Subclass: _run(context)
+    
+    Note over Subclass: Agent-specific logic
+    Subclass->>DB: Write domain entities
+    Subclass-->>Base: AgentRunOutput(output_ids, evidence)
+    
+    Base->>Evidence: _record_evidence(evidence_items)
+    Evidence->>DB: INSERT INTO evidence_records
+    
+    Base->>DB: UPDATE agent_runs SET status=succeeded
+    Base-->>Caller: AgentResult(status=succeeded, output_ids)
+    
+    Note over Base: On exception: status=failed + error_message
+```
+
+### Template Method Pattern
+
+`BaseAgent.execute()` implements the template method pattern:
+1. **Create agent run** — Record start in `agent_runs` table
+2. **Validate** — Check required context fields (raises on failure)
+3. **Execute** — Call `_run()` (subclass implements agent logic)
+4. **Record evidence** — Store provenance in `evidence_records`
+5. **Update agent run** — Mark succeeded/failed with output summary
+
+Subclasses only implement `_run()`. Everything else is automatic.
+
+---
 
 ## Agent Principles
 

@@ -11,6 +11,86 @@ Irtiqa Intelligence automates lead discovery, enrichment, and prioritization thr
 
 ---
 
+## What is Irtiqa?
+
+Irtiqa transforms raw company data into actionable sales intelligence through a **multi-agent pipeline**:
+
+1. **Discover** companies matching your ideal customer profile (ICP)
+2. **Scrape** and analyze company websites for technology signals
+3. **Detect** buying intent from hiring, funding, and technology changes
+4. **Score** leads using multi-factor intelligence scoring
+5. **Personalize** outreach messages based on company intelligence
+
+**Result:** Prioritized, scored leads with context-aware outreach recommendations.
+
+---
+
+## Architecture
+
+```mermaid
+graph TD
+    subgraph Client["Client Layer"]
+        UI[Web UI / API Client]
+    end
+    
+    subgraph API["API Layer (FastAPI)"]
+        Routes[REST Endpoints<br/>70+ endpoints]
+        Auth[JWT Authentication<br/>Multi-Tenancy]
+    end
+    
+    subgraph Service["Service Layer"]
+        Services[Business Logic<br/>Transaction Boundaries]
+    end
+    
+    subgraph Intelligence["Intelligence Layer"]
+        Workflows[3 Workflows<br/>Orchestration]
+        Agents[6 Agents<br/>Specialized Intelligence]
+    end
+    
+    subgraph Data["Data Layer"]
+        Repos[Repositories<br/>Tenant Filtering]
+        ORM[SQLAlchemy ORM<br/>19 Tables]
+    end
+    
+    subgraph Storage["Storage Layer"]
+        SQLite[(SQLite Dev)]
+        Postgres[(PostgreSQL Prod)]
+    end
+    
+    subgraph Jobs["Background Jobs"]
+        Scheduler[Job Scheduler]
+        Runner[Job Runner]
+    end
+    
+    UI -->|HTTP + JWT| Routes
+    Routes -->|Verify & Inject| Auth
+    Auth -->|Call Methods| Services
+    Services -->|Orchestrate| Workflows
+    Services -->|Execute| Agents
+    Workflows -->|Chain| Agents
+    Agents -->|Query/Persist| Repos
+    Services -->|Query/Persist| Repos
+    Repos -->|Map Entities| ORM
+    ORM -->|Connect| SQLite
+    ORM -->|Connect| Postgres
+    
+    Services -.->|Schedule Async| Scheduler
+    Scheduler -->|Poll & Execute| Runner
+    Runner -->|Invoke| Workflows
+    Runner -->|Invoke| Agents
+    
+    style API fill:#e1f5ff
+    style Service fill:#fff4e1
+    style Intelligence fill:#ffe1e1
+    style Data fill:#f0e1ff
+    style Storage fill:#e1ffe1
+    style Jobs fill:#ffe1f5
+```
+
+**[📖 Complete Architecture Guide](docs/architecture_overview.md)**
+
+---
+
 ## Features
 
 ### 🔐 Authentication & Multi-Tenancy
@@ -20,14 +100,60 @@ Irtiqa Intelligence automates lead discovery, enrichment, and prioritization thr
 - **Tenant Isolation** across all data and API endpoints
 - **Rate Limiting** with database-backed tracking
 
+**[📖 Authentication Design](docs/authentication_multitenancy_v2_design.md)**
+
 ### 🔍 Lead Discovery Engine
+
+```mermaid
+flowchart LR
+    ICP[ICP Search<br/>Industry + Size + Tech] --> Discovery[Discovery Agent]
+    
+    Discovery -->|Query| EDGAR[SEC EDGAR<br/>US Companies]
+    Discovery -->|Query| News[Google News RSS<br/>Funding Signals]
+    Discovery -->|Query| OC[OpenCorporates<br/>Global Registry]
+    
+    EDGAR --> Dedupe[Deduplication<br/>Domain Matching]
+    News --> Dedupe
+    OC --> Dedupe
+    
+    Dedupe --> Score[Discovery Score<br/>0.0-1.0]
+    Score --> Companies[(Companies<br/>needs_review)]
+    
+    Companies -.->|Manual Trigger| Pipeline[Intelligence Pipeline]
+    
+    style Discovery fill:#e1f5ff
+    style Dedupe fill:#fff4e1
+    style Score fill:#ffe1e1
+    style Companies fill:#e1ffe1
+```
+
 - **ICP Search Management**: Define and save ideal customer profile criteria
 - **Multi-Source Discovery**: Automated searches across SEC EDGAR, Google News RSS, and OpenCorporates
 - **Smart Deduplication**: Domain-based duplicate detection with fuzzy matching
 - **Discovery Scoring**: Lightweight match quality scores (0.0-1.0) for prioritization
 - **Evidence Provenance**: Full audit trail of discovery sources
 
-### 🤖 Intelligence Pipeline (6 Production Agents)
+**[📖 Discovery Engine Design](docs/lead_discovery_engine_final.md)**
+
+### 🤖 Intelligence Pipeline
+
+```mermaid
+flowchart LR
+    Input[Company Domain] --> DS[Deep Scraper<br/>Web Extraction]
+    DS -->|HTML + Text| Tech[Technographic<br/>Tech Detection]
+    Tech -->|40+ Signatures| Intent[Intent Signal<br/>Buying Signals]
+    Intent -->|8 Signal Types| Score[Intelligence Scoring<br/>Multi-Factor]
+    Score -->|Weighted Score| Person[Personalization<br/>Outreach Generation]
+    Person --> Output[Scored Lead<br/>+ Messages]
+    
+    style DS fill:#e1f5ff
+    style Tech fill:#fff4e1
+    style Intent fill:#ffe1e1
+    style Score fill:#f0e1ff
+    style Person fill:#e1ffe1
+```
+
+**6 Production Agents:**
 1. **Deep Scraper Agent**: Web content extraction and parsing
 2. **Technographic Agent**: Technology detection (40+ signatures across 8 categories)
 3. **Intent Signal Agent**: Buying signal detection (8 signal families with deterministic rules)
@@ -35,15 +161,20 @@ Irtiqa Intelligence automates lead discovery, enrichment, and prioritization thr
 5. **Personalization Agent**: Multi-variant outreach message generation
 6. **Discovery Agent**: ICP-based company discovery from external sources
 
+**[📖 Agent System](docs/agents.md)** | **[📖 Workflow System](docs/workflows.md)**
+
 ### 📊 Lead Retrieval API
 - **Aggregated Intelligence**: Single endpoint returns companies with technologies, intent signals, scores, and outreach messages
 - **Smart Filtering**: Filter by minimum score, pagination support
 - **Tenant-Scoped**: Automatic organization isolation
+- **N+1 Prevention**: Batch loading strategy for optimal performance
 
 ### ⚙️ Background Job System
 - **Async Execution**: Agent and workflow scheduling with status tracking
 - **Retry Policies**: Exponential backoff with configurable limits
 - **Job Management**: Schedule, cancel, retry, and monitor background tasks
+
+**[📖 Background Jobs Design](docs/background_job_foundation_design.md)**
 
 ### 📈 Evidence Records
 - **Provenance Tracking**: Full audit trail for all intelligence data
@@ -57,101 +188,38 @@ Irtiqa Intelligence automates lead discovery, enrichment, and prioritization thr
 
 ---
 
-## Architecture
+## Database Schema
 
-Irtiqa Intelligence follows a **layered, modular architecture** designed for maintainability and testability:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         API Layer (FastAPI)                  │
-│  REST Endpoints · JWT Auth · Request Validation · CORS      │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────┐
-│                        Service Layer                         │
-│  Business Logic · Transaction Boundaries · Validation        │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-┌───────▼────────┐  ┌────────▼─────────┐  ┌──────▼──────────┐
-│  Agent System  │  │ Workflow System  │  │  Job Scheduler  │
-│                │  │                  │  │                 │
-│  6 Agents      │  │  3 Workflows     │  │  Background     │
-│  Agent Registry│  │  Workflow Runner │  │  Execution      │
-└───────┬────────┘  └────────┬─────────┘  └──────┬──────────┘
-        │                    │                    │
-        └────────────────────┼────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────┐
-│                     Repository Layer                         │
-│  Data Access · Query Building · No Business Logic            │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────┐
-│                   Database Layer (SQLAlchemy)                │
-│  ORM Models · Alembic Migrations · Connection Pooling        │
-│  SQLite (Development) · PostgreSQL (Production)              │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+erDiagram
+    organizations ||--o{ companies : owns
+    organizations ||--o{ contacts : owns
+    companies ||--o{ websites : has
+    companies ||--o{ technologies : uses
+    companies ||--o{ intent_signals : emits
+    companies ||--o{ intelligence_scores : receives
+    companies ||--o{ outreach_messages : targeted_by
+    
+    agent_runs ||--o{ technologies : detects
+    agent_runs ||--o{ intent_signals : finds
+    agent_runs ||--o{ intelligence_scores : computes
+    agent_runs ||--o{ outreach_messages : generates
+    agent_runs ||--o{ evidence_records : produces
+    
+    discovery_searches ||--o{ discovery_runs : executes
+    discovery_searches ||--o{ companies : discovers
+    
+    jobs ||--o{ agent_runs : triggers
 ```
 
-### Core Technologies
+**19 Tables:**
+- 8 core intelligence tables (companies, contacts, websites, technologies, intent_signals, intelligence_scores, outreach_messages, evidence_records)
+- 2 system tables (agent_runs, jobs)
+- 2 discovery tables (discovery_searches, discovery_runs)
+- 3 auth tables (users, organizations, memberships)
+- 4 token tables (refresh_tokens, email_verification_tokens, password_reset_tokens, failed_login_attempts)
 
-- **FastAPI**: High-performance async web framework with automatic OpenAPI docs
-- **SQLAlchemy 2.0**: Modern ORM with full PostgreSQL compatibility
-- **Alembic**: Database migration management with schema drift detection
-- **Pydantic v2**: Request/response validation and serialization
-- **SQLite**: Development database with WAL mode for concurrency
-- **PostgreSQL**: Production database (verified compatible, 27 dedicated tests)
-
-### Design Patterns
-
-- **Repository Pattern**: Encapsulates data access logic
-- **Service Layer**: Owns transaction boundaries and business rules
-- **Agent Pattern**: Modular, reusable intelligence gathering components
-- **Workflow Pattern**: Multi-step orchestration with error handling
-- **Dependency Injection**: FastAPI dependencies for testability
-
----
-
-## Discovery Engine
-
-The **Lead Discovery Engine** enables proactive lead generation by searching external data sources based on ideal customer profiles (ICP).
-
-### Discovery Search
-Define search criteria once, reuse indefinitely:
-- Industry filters (e.g., "fintech", "healthcare")
-- Company size ranges (e.g., 10-500 employees)
-- Technology requirements (e.g., "Salesforce", "HubSpot")
-- Keywords (e.g., "Series A", "hiring engineer")
-- Geography targeting
-
-### Discovery Run
-Execute a discovery search to find matching companies:
-- **Status Tracking**: `running`, `succeeded`, `failed`
-- **Statistics**: Sources queried, companies found/created/skipped
-- **Error Reporting**: Detailed error messages for failed runs
-
-### Discovery Agent
-Multi-source discovery with graceful degradation:
-1. **SEC EDGAR**: Unlimited full-text search for US public company filings
-2. **Google News RSS**: Unlimited news feed searches for funding/hiring signals
-3. **OpenCorporates**: 500 lookups/month for international company registry data
-
-### Discovery Pipeline Workflow
-```
-Search Criteria → Discovery Agent → Deduplicate → Create Companies → Update Stats
-                      │
-                      ├── SEC EDGAR
-                      ├── Google News RSS
-                      └── OpenCorporates
-```
-
-Companies are created with:
-- `status='needs_review'` for manual approval
-- `discovered_via='discovery_pipeline'` for audit trail
-- `discovery_score` (0.0-1.0) for prioritization
-- Link to originating `discovery_search`
+**[📖 Database Design](docs/database.md)** | **[📖 Entity Relationships](docs/entity_relationships.md)**
 
 ---
 
@@ -162,13 +230,12 @@ irtiqa-intelligence/
 ├── app/
 │   ├── agents/              # 6 production agents
 │   │   ├── deep_scraper/    # Web scraping & content extraction
-│   │   ├── technographic/   # Technology detection
-│   │   ├── intent_signal/   # Buying signal detection
+│   │   ├── technographic/   # Technology detection (40+ signatures)
+│   │   ├── intent_signal/   # Buying signal detection (8 families)
 │   │   ├── intelligence_scoring/  # Lead scoring
 │   │   ├── personalization/ # Outreach generation
-│   │   └── discovery/       # Company discovery
-│   ├── api/                 # REST API endpoints
-│   │   └── v1/endpoints/    # Versioned API routes
+│   │   └── discovery/       # Company discovery (3 sources)
+│   ├── api/                 # REST API endpoints (70+)
 │   ├── core/                # Configuration, logging, errors
 │   ├── database/            # Engine, session management
 │   ├── jobs/                # Background job system
@@ -178,14 +245,11 @@ irtiqa-intelligence/
 │   ├── services/            # Business logic layer (15 services)
 │   └── workflows/           # Multi-agent orchestration (3 workflows)
 ├── database/
-│   └── migrations/          # Alembic migration scripts
+│   └── migrations/          # Alembic migration scripts (8 revisions)
 ├── docs/                    # Architecture & design documentation
 ├── tests/
-│   ├── integration/         # End-to-end tests (database, API, workflows)
-│   └── unit/                # Component tests (agents, services, schemas)
-├── .env.example             # Environment variable template
-├── alembic.ini              # Alembic configuration
-├── pyproject.toml           # Dependencies & project metadata
+│   ├── integration/         # End-to-end tests
+│   └── unit/                # Component tests
 └── README.md
 ```
 
@@ -210,184 +274,138 @@ irtiqa-intelligence/
 
 ## Testing
 
-Comprehensive test coverage across all layers:
+```mermaid
+flowchart LR
+    Push[Git Push/PR] --> CI[GitHub Actions]
+    
+    CI --> Validate[Validation]
+    CI --> Test[Testing]
+    
+    Validate --> Ruff[Ruff Lint<br/>Advisory]
+    Validate --> Mypy[Mypy Types<br/>Advisory]
+    Validate --> Compile[compileall<br/>BLOCKING]
+    
+    Test --> Migrate[Alembic Upgrade<br/>BLOCKING]
+    Test --> Drift[Schema Drift Check<br/>BLOCKING]
+    Test --> SQLiteTests[SQLite Tests<br/>606 tests<br/>BLOCKING]
+    Test --> PGTests[PostgreSQL Tests<br/>27 tests<br/>BLOCKING]
+    
+    Compile --> Result{All Pass?}
+    Migrate --> Result
+    Drift --> Result
+    SQLiteTests --> Result
+    PGTests --> Result
+    
+    Result -->|Yes| Success[✓ CI Pass]
+    Result -->|No| Failure[✗ CI Fail]
+    
+    style Success fill:#e1ffe1
+    style Failure fill:#ffe1e1
+```
 
-- **633 Tests** (606 SQLite, 27 PostgreSQL compatibility)
-- **100% Pass Rate** on main branch
-- **Test Types**:
-  - Unit tests for agents, services, schemas, workflows
-  - Integration tests for API endpoints, repositories, pipelines
-  - Database tests for migrations, constraints, transactions
-  - PostgreSQL compatibility tests (18.x verified)
+**633 Tests** (606 SQLite, 27 PostgreSQL compatibility)  
+**100% Pass Rate** on main branch
 
-### CI Pipeline
-Every push and PR runs:
-1. **Validation**: Ruff linting, mypy type checking, compileall syntax check
-2. **Migration Check**: Alembic schema drift detection
-3. **SQLite Tests**: Full test suite (606 tests)
-4. **PostgreSQL Tests**: Compatibility verification (27 tests)
-
-**GitHub Actions Badge:** ![CI](https://github.com/Luffyz/irtiqa-intelligence/actions/workflows/ci.yml/badge.svg)
+**Test Coverage:**
+- Unit tests for agents, services, schemas, workflows
+- Integration tests for API endpoints, repositories, pipelines
+- Database tests for migrations, constraints, transactions
+- PostgreSQL compatibility verification
 
 ---
 
 ## Development
 
-### Prerequisites
-- Python 3.11+
-- pip or uv (recommended)
-
 ### Installation
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/Luffyz/irtiqa-intelligence.git
-   cd irtiqa-intelligence
-   ```
-
-2. **Create virtual environment**:
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate      # Windows
-   source .venv/bin/activate   # Linux/Mac
-   ```
-
-3. **Install dependencies**:
-   ```bash
-   pip install -e .[dev]
-   ```
-
-   For PostgreSQL support:
-   ```bash
-   pip install "psycopg[binary]>=3.2.0"
-   ```
-
-4. **Configure environment**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your settings
-   ```
-
-### Environment Variables
-
-Key configuration options in `.env`:
-
 ```bash
-# Database
-DATABASE_URL=sqlite:///database/irtiqa.db
-# For PostgreSQL: postgresql+psycopg://user:pass@localhost:5432/irtiqa
+# Clone repository
+git clone https://github.com/Luffyz/irtiqa-intelligence.git
+cd irtiqa-intelligence
 
-# Logging
-LOG_LEVEL=INFO
-LOG_FILE_ENABLED=true
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+.venv\Scripts\activate      # Windows
 
-# Discovery Engine
-SEC_EDGAR_USER_AGENT=YourCompany/1.0 (your-email@example.com)
-OPENCORPORATES_API_KEY=your-key-here  # Optional
-ENABLED_SOURCES=sec_edgar,google_news_rss,opencorporates
-MAX_COMPANIES_PER_RUN=100
+# Install dependencies
+pip install -e .[dev]
 
-# Authentication
-JWT_SECRET_KEY=your-secret-key-here
-JWT_ALGORITHM=RS256
+# For PostgreSQL support
+pip install "psycopg[binary]>=3.2.0"
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
 ```
 
 ### Run Migrations
 
-Apply database schema:
 ```bash
+# Apply database schema
 python -m alembic upgrade head
-```
 
-Check for schema drift:
-```bash
+# Check for schema drift
 python -m alembic check
 ```
 
 ### Run Development Server
 
-Start the FastAPI server:
 ```bash
+# Start FastAPI server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-API documentation available at:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+**API Documentation:**
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
 ### Run Tests
 
-Execute full test suite:
 ```bash
+# Execute full test suite
 python -m pytest
-```
 
-Run with coverage:
-```bash
+# Run with coverage
 python -m pytest --cov=app --cov-report=html
-```
 
-Run specific test categories:
-```bash
-# Unit tests only
+# Run specific test categories
 python -m pytest tests/unit/
-
-# Integration tests only
 python -m pytest tests/integration/
-
-# PostgreSQL compatibility tests
-DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/irtiqa_test \
-python -m pytest tests/integration/test_postgresql_compatibility.py
-```
-
-### Alembic Commands
-
-```bash
-# Create new migration
-python -m alembic revision --autogenerate -m "description"
-
-# Upgrade to latest
-python -m alembic upgrade head
-
-# Downgrade one revision
-python -m alembic downgrade -1
-
-# Show current revision
-python -m alembic current
-
-# Show migration history
-python -m alembic history
 ```
 
 ---
 
-## API Documentation
+## Documentation Map
 
-Once the server is running, explore the interactive API documentation:
+### Getting Started
+- **[README](README.md)** — This file (overview, setup, quick start)
+- **[Architecture Overview](docs/architecture_overview.md)** — System layers, request lifecycle, patterns
 
-- **OpenAPI Schema**: http://localhost:8000/openapi.json
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+### Core Systems
+- **[Database Design](docs/database.md)** — Schema, tables, constraints, migrations
+- **[Entity Relationships](docs/entity_relationships.md)** — FK relationships, cascade rules
+- **[Agent System](docs/agents.md)** — All 6 agents, responsibilities, lifecycles
+- **[Workflow System](docs/workflows.md)** — Workflow orchestration, implementations
+- **[Background Jobs](docs/background_job_foundation_design.md)** — Async execution, retry policies
 
-### Key Endpoints
+### Features
+- **[Discovery Engine](docs/lead_discovery_engine_final.md)** — ICP search, external sources, deduplication
+- **[Authentication](docs/authentication_multitenancy_v2_design.md)** — JWT, multi-tenancy, RBAC
+- **[Evidence System](docs/evidence_records_system_design.md)** — Provenance tracking
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/companies` | GET, POST | Company CRUD operations |
-| `/api/v1/leads` | GET | Aggregated lead intelligence |
-| `/api/v1/discovery/searches` | GET, POST | ICP search management |
-| `/api/v1/discovery/runs` | GET | Discovery run status & history |
-| `/api/v1/intelligence/pipeline` | POST | Trigger intelligence enrichment |
-| `/api/v1/jobs` | GET | Background job monitoring |
-| `/api/v1/evidence/by-company/{id}` | GET | Evidence audit trail |
-| `/auth/register` | POST | User registration |
-| `/auth/login` | POST | JWT authentication |
+### Specialized Documentation
+- **[Agent Interface Design](docs/agent_interface_design.md)** — BaseAgent pattern details
+- **[Deep Scraper Design](docs/deep_scraper_design.md)** — Web scraping architecture
+- **[Technographic Agent Design](docs/technographic_agent_design.md)** — Technology detection
+- **[Intent Signal Agent Design](docs/intent_signal_agent_design.md)** — Buying signal rules
+- **[Personalization Agent Design](docs/personalization_agent_design.md)** — Outreach generation
 
 ---
 
 ## Roadmap
 
-### Current Status: Backend Complete ✅
+### ✅ Current Status: Backend Complete
 
 The backend is production-ready with all planned features implemented:
 - ✅ Authentication & multi-tenancy
@@ -398,7 +416,7 @@ The backend is production-ready with all planned features implemented:
 - ✅ REST API (70+ endpoints)
 - ✅ 633 automated tests
 
-### Next Milestones
+### 🎯 Next Milestones
 
 **Phase 1: Frontend Development**
 - React/Vue.js web application
@@ -446,11 +464,11 @@ This project is proprietary software. All rights reserved.
 ## Acknowledgments
 
 Built with:
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
-- [SQLAlchemy](https://www.sqlalchemy.org/) - Python SQL toolkit
-- [Alembic](https://alembic.sqlalchemy.org/) - Database migrations
-- [Pydantic](https://docs.pydantic.dev/) - Data validation
-- [pytest](https://pytest.org/) - Testing framework
+- [FastAPI](https://fastapi.tiangolo.com/) — Modern Python web framework
+- [SQLAlchemy](https://www.sqlalchemy.org/) — Python SQL toolkit
+- [Alembic](https://alembic.sqlalchemy.org/) — Database migrations
+- [Pydantic](https://docs.pydantic.dev/) — Data validation
+- [pytest](https://pytest.org/) — Testing framework
 
 ---
 
