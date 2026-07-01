@@ -19,6 +19,7 @@ from app.schemas.discovery import (
     DiscoverySearchUpdate,
 )
 from app.services import DiscoveryRunService, DiscoverySearchService, JobService
+from app.workflows.context import WorkflowContext
 
 
 router = APIRouter(prefix="/discovery", tags=["discovery"])
@@ -129,8 +130,6 @@ def trigger_discovery_run(
     # Schedule background workflow with the existing run_id
     # If job scheduling fails, mark run as failed to prevent orphaned runs
     try:
-        from app.workflows.context import WorkflowContext
-
         context = WorkflowContext(
             workflow_name="discovery_pipeline",
             company_id=None,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.models.discovery_run import DiscoveryRun
 from app.repositories.base import BaseRepository
