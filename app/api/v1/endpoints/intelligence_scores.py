@@ -31,13 +31,22 @@ def create_intelligence_score(
 def list_intelligence_scores(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    company_id: str | None = Query(default=None),
     tenant: TenantContext = Depends(get_current_organization),
     service: IntelligenceScoreService = Depends(get_intelligence_score_service),
 ) -> IntelligenceScoreList:
-    scores = service.list(organization_id=tenant.organization_id, limit=limit, offset=offset)
+    scores = service.list(
+        organization_id=tenant.organization_id,
+        company_id=company_id,
+        limit=limit,
+        offset=offset,
+    )
     return IntelligenceScoreList(
         items=[IntelligenceScoreRead.model_validate(s) for s in scores],
-        total=len(scores),
+        total=service.count(
+            organization_id=tenant.organization_id,
+            company_id=company_id,
+        ),
         limit=limit,
         offset=offset,
     )

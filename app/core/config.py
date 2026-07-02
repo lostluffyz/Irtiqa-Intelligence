@@ -70,11 +70,32 @@ class DiscoverySettings:
 
 
 @dataclass(frozen=True)
+class CORSSettings:
+    allowed_origins: str = "http://localhost:3000"
+    allow_credentials: bool = True
+    allow_methods: str = "GET,POST,PATCH,DELETE,OPTIONS"
+    allow_headers: str = "Authorization,Content-Type"
+
+    @property
+    def origin_list(self) -> list[str]:
+        return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
+    @property
+    def method_list(self) -> list[str]:
+        return [m.strip() for m in self.allow_methods.split(",") if m.strip()]
+
+    @property
+    def header_list(self) -> list[str]:
+        return [h.strip() for h in self.allow_headers.split(",") if h.strip()]
+
+
+@dataclass(frozen=True)
 class Settings:
     database: DatabaseSettings
     logging: LoggingSettings
     auth: AuthSettings
     discovery: DiscoverySettings = field(default_factory=DiscoverySettings)
+    cors: CORSSettings = field(default_factory=CORSSettings)
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -145,5 +166,20 @@ def get_settings() -> Settings:
             ),
             request_timeout_seconds=float(os.getenv("DISCOVERY_REQUEST_TIMEOUT_SECONDS", "10.0")),
             retry_count=_env_int("DISCOVERY_RETRY_COUNT", 2),
+        ),
+        cors=CORSSettings(
+            allowed_origins=os.getenv(
+                "CORS_ALLOWED_ORIGINS",
+                "http://localhost:3000",
+            ),
+            allow_credentials=_env_bool("CORS_ALLOW_CREDENTIALS", True),
+            allow_methods=os.getenv(
+                "CORS_ALLOW_METHODS",
+                "GET,POST,PATCH,DELETE,OPTIONS",
+            ),
+            allow_headers=os.getenv(
+                "CORS_ALLOW_HEADERS",
+                "Authorization,Content-Type",
+            ),
         ),
     )

@@ -31,13 +31,22 @@ def create_intent_signal(
 def list_intent_signals(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    company_id: str | None = Query(default=None),
     tenant: TenantContext = Depends(get_current_organization),
     service: IntentSignalService = Depends(get_intent_signal_service),
 ) -> IntentSignalList:
-    intent_signals = service.list(organization_id=tenant.organization_id, limit=limit, offset=offset)
+    intent_signals = service.list(
+        organization_id=tenant.organization_id,
+        company_id=company_id,
+        limit=limit,
+        offset=offset,
+    )
     return IntentSignalList(
         items=[IntentSignalRead.model_validate(s) for s in intent_signals],
-        total=len(intent_signals),
+        total=service.count(
+            organization_id=tenant.organization_id,
+            company_id=company_id,
+        ),
         limit=limit,
         offset=offset,
     )

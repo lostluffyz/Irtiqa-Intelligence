@@ -63,18 +63,26 @@ class BaseService(Generic[ModelT, RepositoryT]):
             raise error
         return entity
 
-    def list(self, *, organization_id: str | None = None, limit: int = 100, offset: int = 0) -> Sequence[ModelT]:
+    def list(self, *, organization_id: str | None = None, company_id: str | None = None, limit: int = 100, offset: int = 0) -> Sequence[ModelT]:
         self._validate_limit(limit)
         self._validate_offset(offset)
 
         def operation(session: Session) -> Sequence[ModelT]:
-            return self._repository(session).list(organization_id=organization_id, limit=limit, offset=offset)
+            return self._repository(session).list(
+                organization_id=organization_id,
+                company_id=company_id,
+                limit=limit,
+                offset=offset,
+            )
 
         return self._run_in_transaction("list", operation)
 
-    def count(self) -> int:
+    def count(self, *, organization_id: str | None = None, company_id: str | None = None) -> int:
         def operation(session: Session) -> int:
-            return self._repository(session).count()
+            return self._repository(session).count(
+                organization_id=organization_id,
+                company_id=company_id,
+            )
 
         return self._run_in_transaction("count", operation)
 

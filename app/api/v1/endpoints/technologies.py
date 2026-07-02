@@ -23,12 +23,13 @@ def create_technology(
 def list_technologies(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    company_id: str | None = Query(default=None),
     service: TechnologyService = Depends(get_technology_service),
 ) -> TechnologyList:
-    technologies = service.list(limit=limit, offset=offset)
+    technologies = service.list(company_id=company_id, limit=limit, offset=offset)
     return TechnologyList(
         items=[TechnologyRead.model_validate(technology) for technology in technologies],
-        total=service.count(),
+        total=service.count(company_id=company_id),
         limit=limit,
         offset=offset,
     )

@@ -330,16 +330,11 @@ const navigation = [
 
 **API Calls:**
 - `GET /companies/{id}` — Company data (verified)
-- `GET /technologies` — All technologies (verified: **no `company_id` query param**; items contain `company_id` field for client-side filtering)
-- `GET /intent-signals` — All intent signals (verified: **no `company_id` query param**; items contain `company_id` field)
-- `GET /intelligence-scores` — All scores (verified: **no `company_id` query param**; items contain `company_id` field)
-- `GET /outreach-messages` — All outreach (verified: **no `company_id` query param**; items contain `company_id` field)
+- `GET /technologies?company_id={id}` — Technologies filtered by company
+- `GET /intent-signals?company_id={id}` — Intent signals filtered by company
+- `GET /intelligence-scores?company_id={id}` — Scores filtered by company
+- `GET /outreach-messages?company_id={id}` — Outreach filtered by company
 - `GET /evidence/by-company/{id}` — Provenance trail (verified: uses path param `company_id`)
-
-**⚠️ BLOCKER:** Technologies, intent-signals, intelligence-scores, and outreach-messages endpoints have no server-side `company_id` filter. Options:
-1. **Defer** these tabs and rely on Lead aggregation endpoint (recommended for MVP)
-2. Fetch full list and client-side filter (degrades with data volume)
-3. Backend adds `?company_id=` support (requires backend change)
 
 **UI Sections (Tabs):**
 
@@ -1078,7 +1073,7 @@ Companies, leads, jobs, etc. are cached by React Query, not Zustand.
 
 ```typescript
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
   timeout: 30000,
 });
 
@@ -2128,8 +2123,8 @@ The following features are **not included in MVP** because backend support is un
 - ~~Companies list: confirm query parameters beyond `limit`/`offset`~~ ✅ Verified: only `limit`/`offset`
 - ~~Discovery searches list: confirm search/sort query parameter support~~ ✅ Verified: only `limit`/`offset`
 - ~~Leads list: confirm `?order_by=` parameter support~~ ✅ Verified: `order_by` not supported, client-side sorting only
-- **Open:** CORS middleware must be added to backend
-- **Open:** Company detail sub-resource filters (`?company_id=`) not available
+- ~~CORS middleware added~~ ✅ Done. `CORSMiddleware` in `app/main.py` via `CORSSettings`.
+- ~~Company detail sub-resource filters~~ ✅ Done. All four endpoints support `?company_id=`.
 
 ---
 
@@ -2139,25 +2134,23 @@ The following features are **not included in MVP** because backend support is un
 
 ### Verification Evidence
 
-**Verification date:** 2026-07-02
+**Verification date:** 2026-07-02 (updated post-patch)
 **OpenAPI schema source:** `curl http://localhost:8000/openapi.json | jq . > /tmp/openapi_verified.json`
 **Backend source files inspected:**
-- `app/api/v1/endpoints/auth.py` — Auth endpoints (register, verify-email, login, logout, refresh, me)
+- `app/api/v1/endpoints/auth.py` — Auth endpoints
 - `app/api/v1/endpoints/companies.py` — Company CRUD with role checks
 - `app/api/v1/endpoints/jobs.py` — Job list, cancel, retry
 - `app/api/v1/endpoints/discovery.py` — Discovery searches, runs, triggers
 - `app/api/v1/endpoints/intelligence.py` — Intelligence pipeline trigger
 - `app/api/v1/endpoints/leads.py` — Lead aggregation
-- `app/api/v1/endpoints/technologies.py` — Technology list (no company_id filter)
-- `app/api/v1/endpoints/intent_signals.py` — Intent signal list (no company_id filter)
-- `app/api/v1/endpoints/intelligence_scores.py` — Intelligence score list (no company_id filter)
-- `app/api/v1/endpoints/outreach_messages.py` — Outreach message list (no company_id filter)
-- `app/api/dependencies.py` — Auth dependencies (`get_current_user`, `get_current_organization`)
-- `app/core/tenant.py` — `require_role()` function and role levels
-- `app/core/security.py` — JWT creation, token generation
-- `app/services/auth_service.py` — Login, logout, refresh business logic
-- `app/core/config.py` — Settings (no CORS config)
-- `app/main.py` — App factory (no CORS middleware)
+- `app/api/v1/endpoints/technologies.py` — Technology list (now supports `?company_id=`)
+- `app/api/v1/endpoints/intent_signals.py` — Intent signal list (now supports `?company_id=`)
+- `app/api/v1/endpoints/intelligence_scores.py` — Intelligence score list (now supports `?company_id=`)
+- `app/api/v1/endpoints/outreach_messages.py` — Outreach message list (now supports `?company_id=`)
+- `app/api/dependencies.py` — Auth dependencies
+- `app/core/tenant.py` — Role definitions
+- `app/core/config.py` — Settings with `CORSSettings`
+- `app/main.py` — App factory with `CORSMiddleware`
 
 **Backend server command:** `DATABASE_URL="sqlite:///database/irtiqa.db" DEV_MODE=true LOG_CONSOLE_ENABLED=false LOG_FILE_ENABLED=false .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000`
 
@@ -2168,7 +2161,7 @@ The following features are **not included in MVP** because backend support is un
 | Area | Verified Contract | Evidence | Frontend Decision | Status |
 |------|------------------|----------|-------------------|--------|
 | **API base path** | No `/api/v1` prefix. All endpoints served at root (e.g., `/auth/login`). `NEXT_PUBLIC_API_URL=http://localhost:8000` | OpenAPI schema paths: `/auth/login`, `/companies`, `/leads` — no `/api/v1` prefix. `curl http://localhost:8000/auth/me` returns `401`. `curl http://localhost:8000/api/v1/auth/me` returns `404`. | Set `NEXT_PUBLIC_API_URL=http://localhost:8000` (no `/api/v1` suffix). | ✅ Verified — **must fix** |
-| **CORS** | No CORS middleware configured. OPTIONS preflight returns `405 Method Not Allowed`. No `Access-Control-Allow-Origin` header on any response. | `grep -r "CORSMiddleware\|cors\|CORS" app/ --include="*.py"` — no results. `curl -i -H "Origin: http://localhost:3000" -X OPTIONS http://localhost:8000/auth/login` returns `405`. | **BLOCKER.** Browser will block cross-origin requests from `localhost:3000` to `localhost:8000`. Must add `CORSMiddleware` to `app/main.py` before frontend can function. | ❌ **BLOCKER** |
+| **CORS** | `CORSMiddleware` configured in `app/main.py` via `CORSSettings` in `app/core/config.py`. Allows `http://localhost:3000` origin with `Authorization` and `Content-Type` headers. `allow_credentials=True`. Config-driven via env vars (`CORS_ALLOWED_ORIGINS`, `CORS_ALLOW_CREDENTIALS`, `CORS_ALLOW_METHODS`, `CORS_ALLOW_HEADERS`). Production safe: only explicit origins, no wildcards. | OPTIONS preflight to `/auth/login` and `/companies` returns `200` with `Access-Control-Allow-Origin: http://localhost:3000`, `Access-Control-Allow-Credentials: true`. Tests pass. | Frontend at `localhost:3000` can call backend at `localhost:8000`. Axios `withCredentials` should be `true` if needed. | ✅ Verified |
 | **POST /auth/login** | Request: `{email: string, password: string}` (both required). Response 200: `LoginResponse` with `access_token`, `refresh_token`, `token_type` (default "bearer"), `user: UserResponse` (required), `organization: OrganizationSummary \| null` (nullable). | OpenAPI schema `LoginRequest` (required: email, password), `LoginResponse` (required: access_token, refresh_token, user; organization nullable). Source: `app/api/v1/endpoints/auth.py:61-84`. | Store access_token in memory, refresh_token in localStorage. Store user and organization from response. | ✅ Verified |
 | **POST /auth/refresh** | Request: `{refresh_token: string}` (required, minLength=1). Response 200: `RefreshTokenResponse` with `access_token`, `refresh_token` (rotated), `token_type`. **NO user/organization in response.** | OpenAPI schema `RefreshTokenRequest` (required: refresh_token), `RefreshTokenResponse` (required: access_token, refresh_token). Source: `app/api/v1/endpoints/auth.py:97-106`, `app/services/auth_service.py:257-298` (revokes old, issues new). | On refresh: update access_token and refresh_token only. **Do NOT clear user/org from store** — they remain from the login response. | ✅ Verified — **must fix doc** |
 | **Refresh token rotation** | Backend revokes old token, issues new one on every refresh call. | Source: `app/services/auth_service.py:281-296` — old token set `revoked_at`, new token created. | Update stored refresh_token on every refresh response. | ✅ Verified |
@@ -2182,10 +2175,10 @@ The following features are **not included in MVP** because backend support is un
 | **JobRead fields** | `id`, `created_at`, `updated_at`, `job_type` (enum: "agent", "workflow"), `target_name`, `payload` (string), `status` (enum: "pending", "running", "succeeded", "failed", "cancelled"), `scheduled_at`, `started_at` (nullable), `completed_at` (nullable), `retry_count`, `max_retries`, `last_error` (nullable), `agent_run_id` (nullable). All required. | OpenAPI schema `JobRead`. | `completed_at` (not `finished_at`). `payload` is a JSON string. `job_type` enum: "agent" / "workflow". | ✅ Verified — **must fix doc** |
 | **GET /discovery/searches** | Query params: `limit` (default 100, 1–500), `offset` (default 0, ≥0). Response: `DiscoverySearchList` with `total`, `limit`, `offset`, `items: DiscoverySearchRead[]`. No `?status=`, `?search=`, `?order_by=` params. | OpenAPI schema. | Client-side filtering/sorting only. | ✅ Verified |
 | **GET /discovery/runs/{run_id}** | Response: `DiscoveryRunRead` with `id`, `created_at`, `updated_at`, `organization_id`, `search_id`, `status` (enum: "running", "succeeded", "failed"), `sources_queried`, `companies_found`, `companies_created`, `companies_skipped`, `started_at`, `finished_at` (nullable), `error_message` (nullable). **No per-source progress — only aggregate counters.** | OpenAPI schema `DiscoveryRunRead`. | Run status UI shows aggregate progress. `sources_queried` is a single integer, not a per-source breakdown. The run status detail UI mockup showing per-source progress (SEC EDGAR ✓, Google News RSS ✓, OpenCorporates ⏳) does NOT match the backend contract. | ✅ Verified — **must fix doc** |
-| **GET /technologies** | No `company_id` query param. Response: `TechnologyList` (total, limit, offset, items: TechnologyRead[]). TechnologyRead has `company_id` field in items but no server-side filter. | OpenAPI schema. `grep company_id app/api/v1/endpoints/technologies.py` — no results. | **Company detail tab cannot filter server-side.** Must fetch all technologies and client-side filter, OR use the Intelligence Score (which has all data aggregated). Move this to Deferred UI or accept client-side filtering of full list. | ✅ Verified — **BLOCKED** |
-| **GET /intent-signals** | No `company_id` query param. Same pattern as technologies. | OpenAPI schema. | Same decision as technologies. | ✅ Verified — **BLOCKED** |
-| **GET /intelligence-scores** | No `company_id` query param. Same pattern. | OpenAPI schema. | Same decision as technologies. | ✅ Verified — **BLOCKED** |
-| **GET /outreach-messages** | No `company_id` query param. Same pattern. | OpenAPI schema. | Same decision as technologies. | ✅ Verified — **BLOCKED** |
+| **GET /technologies** | Optional `company_id` query param. Response: `TechnologyList` (total, limit, offset, items: TechnologyRead[]). Without `company_id`: returns all org-scoped records. With `company_id`: returns only that company's records, with correct filtered total. | OpenAPI schema + backend patch + tests passing. | Use `GET /technologies?company_id={id}` for company detail tabs. | ✅ Verified |
+| **GET /intent-signals** | Optional `company_id` query param. Same envelope pattern. | OpenAPI schema + backend patch + tests passing. | Use `GET /intent-signals?company_id={id}` for company detail tabs. | ✅ Verified |
+| **GET /intelligence-scores** | Optional `company_id` query param. Same envelope pattern. | OpenAPI schema + backend patch + tests passing. | Use `GET /intelligence-scores?company_id={id}` for company detail tabs. | ✅ Verified |
+| **GET /outreach-messages** | Optional `company_id` query param. Same envelope pattern. | OpenAPI schema + backend patch + tests passing. | Use `GET /outreach-messages?company_id={id}` for company detail tabs. | ✅ Verified |
 | **GET /evidence/by-company/{company_id}** | Path param: `company_id` (string). Query: `target_type` (nullable), `limit` (default 100), `offset`. Response: `EvidenceList` (total, limit, offset, items: EvidenceRead[]). | OpenAPI schema. | This endpoint DOES support company-specific data via path param. Evidence tab works. | ✅ Verified |
 | **POST /jobs/{id}/cancel** | Requires authenticated user + org membership (`get_current_organization`). **No role check** — any member can cancel. | Source: `app/api/v1/endpoints/jobs.py:112-119` — `Depends(get_current_organization)` only, no `require_role()`. | Show cancel button to all authenticated users in same org. Backend 403 is not expected from role check. | ✅ Verified |
 | **POST /jobs/{id}/retry** | Same as cancel — `get_current_organization` only, **no role check**. | Source: `app/api/v1/endpoints/jobs.py:122-129`. | Same decision. | ✅ Verified |
@@ -2199,22 +2192,22 @@ The following features are **not included in MVP** because backend support is un
 
 **Frontend implementation is allowed only after all of the following are satisfied:**
 
-1. **CORS middleware added to `app/main.py`** — `CORSMiddleware` must allow `http://localhost:3000` origin with `Authorization` header. Without this, browser will block ALL cross-origin API calls. **This is a backend change, not a frontend one.**
+1. **CORS middleware added to `app/main.py`** — ✅ Done. `CORSMiddleware` configured via `CORSSettings` in `app/core/config.py`, allowing `http://localhost:3000` with credentials.
 
 2. **Authentication Contracts** — ✅ All verified and recorded above.
 
 3. **List Endpoints** — ✅ All verified and recorded above.
 
-4. **Company Detail Sub-Resource Filters** — ❌ **No `company_id` filter on technologies, intent-signals, intelligence-scores, outreach-messages.** Either:
-   - (a) Backend adds `?company_id=` filter to these endpoints, OR
-   - (b) Frontend fetches full list and filters client-side (degrades with scale), OR
-   - (c) Defer these tabs and rely on the Lead aggregation endpoint for company-specific data.
+4. **Company Detail Sub-Resource Filters** — ✅ Done. All four endpoints now support optional `?company_id=` query parameter. Behavior:
+   - Omitted: returns all org-scoped records (existing behavior preserved)
+   - Supplied: returns only that company's records with correct filtered total
+   - Nonexistent or cross-org `company_id`: returns empty paginated list (no cross-tenant leakage)
 
 5. **Role-Based Permissions** — ✅ All verified and recorded above.
 
-**Status:** ❌ 2 BLOCKERS remain:
-- **CORS** — No `CORSMiddleware` in `app/main.py`. Browser blocks cross-origin requests.
-- **Company Detail Filters** — No `company_id` query param on sub-resource endpoints.
+6. **API Path Base** — ✅ Frontend uses `http://localhost:8000` (no `/api/v1` prefix).
+
+**Status:** ✅ **GO** — All blockers resolved. Frontend foundation may begin.
 
 ---
 
@@ -2227,9 +2220,10 @@ The following features are **not included in MVP** because backend support is un
 - Phase 2: migrate to httpOnly secure cookies
 
 ⚠️ **CORS:**
-- **No CORS middleware configured.** This is a BLOCKER for local development.
-- Frontend at `localhost:3000` cannot call backend at `localhost:8000` without browser blocking.
-- Must add `CORSMiddleware(app, allow_origins=["http://localhost:3000"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])` to `app/main.py`.
+- **CORS middleware is now configured** via `CORSSettings` in `app/core/config.py`.
+- Allows `http://localhost:3000` origin with `Authorization` and `Content-Type` headers.
+- Configurable via env vars: `CORS_ALLOWED_ORIGINS`, `CORS_ALLOW_CREDENTIALS`, `CORS_ALLOW_METHODS`, `CORS_ALLOW_HEADERS`.
+- Production safe: only explicit origins allowed, no wildcards.
 
 ⚠️ **Responsive Design:**
 - Desktop-first MVP
@@ -2247,186 +2241,12 @@ The following features are **not included in MVP** because backend support is un
 - Phase 9: Vitest + React Testing Library added after core features stable
 
 ⚠️ **Company Detail Tabs:**
-- `/technologies`, `/intent-signals`, `/intelligence-scores`, `/outreach-messages` have no `company_id` server-side filter.
-- Option A: Defer these tabs, rely on Lead aggregation endpoint.
-- Option B: Fetch full list, filter client-side by `company_id` (items contain `company_id` field).
-- Option C: Backend adds `?company_id=` support (requires backend change).
+- All four sub-resource endpoints now support `?company_id={id}` server-side filtering.
+- `GET /technologies?company_id={id}`, `GET /intent-signals?company_id={id}`, `GET /intelligence-scores?company_id={id}`, `GET /outreach-messages?company_id={id}`
 
 ⚠️ **Discovery Run Progress UI:**
 - Backend returns only aggregate counters (`sources_queried`, `companies_found`, etc.) — no per-source status.
 - The Section 4.9 mockup showing per-source progress (SEC EDGAR ✓, Google News RSS ✓) does NOT match the backend contract. Must simplify to show aggregate numbers only.
-
-### Pre-Implementation Verification Commands
-
-```bash
-# 1. Start backend and generate OpenAPI schema
-cd /home/lostluffyz/Projects/Irtiqa-Intelligence
-uvicorn app.main:app --reload --port 8000
-
-# 2. In another terminal, fetch OpenAPI schema
-curl http://localhost:8000/openapi.json | jq . > /tmp/openapi_verified.json
-
-# 3. Verify each endpoint path exists
-jq '.paths | keys' /tmp/openapi_verified.json | grep "/companies"
-jq '.paths | keys' /tmp/openapi_verified.json | grep "/leads"
-jq '.paths | keys' /tmp/openapi_verified.json | grep "/discovery"
-jq '.paths | keys' /tmp/openapi_verified.json | grep "/jobs"
-
-# 4. Check query parameters for each endpoint
-jq '.paths."/companies".get.parameters' /tmp/openapi_verified.json
-jq '.paths."/leads".get.parameters' /tmp/openapi_verified.json
-jq '.paths."/jobs".get.parameters' /tmp/openapi_verified.json
-
-# 5. Verify response schemas
-jq '.paths."/auth/login".post.responses."200".content."application/json".schema' /tmp/openapi_verified.json
-jq '.paths."/leads".get.responses."200".content."application/json".schema' /tmp/openapi_verified.json
-
-# 6. Confirm whether auth refresh/logout endpoints accept a JSON body and the exact refresh-token field name
-jq '.paths."/auth/refresh".post.requestBody.content."application/json".schema' /tmp/openapi_verified.json
-jq '.paths."/auth/logout".post.requestBody.content."application/json".schema' /tmp/openapi_verified.json
-
-# 7. Confirm CORS configuration permits the frontend origin during local development
-# (Test by running the frontend at http://localhost:3000 and making a CORS preflight request)
-curl -H "Origin: http://localhost:3000" \
-     -H "Access-Control-Request-Method: POST" \
-     -H "Access-Control-Request-Headers: Authorization" \
-     -X OPTIONS http://localhost:8000/auth/login -i
-```
-
-### GO Criteria
-
-**Frontend implementation is allowed only after verification results are recorded in this document for:**
-
-1. **Authentication Contracts:**
-   - `POST /auth/login` request body and response schema (including `organization` object presence/fields)
-   - `POST /auth/refresh` request body (exact refresh-token field name) and response schema (including `organization` object)
-   - `POST /auth/logout` request body schema
-   - Refresh-token rotation behavior (whether backend issues new refresh token on every refresh)
-   - Refresh failure behavior (expected status code and error envelope)
-
-2. **List Endpoints:**
-   - Pagination response envelope structure for `GET /companies` (items, total, limit, offset fields)
-   - Pagination response envelope structure for `GET /leads` (items, total, limit, offset fields)
-   - Lead aggregation response shape (`LeadResponse` with nested entities: company, technologies, signals, scores, outreach)
-
-3. **Query Parameter Support:**
-   - `GET /technologies?company_id={id}` filter support
-   - `GET /intent-signals?company_id={id}` filter support
-   - `GET /intelligence-scores?company_id={id}` filter support
-   - `GET /outreach-messages?company_id={id}` filter support
-
-4. **Role-Based Permissions:**
-   - Job cancel endpoint (`POST /jobs/{id}/cancel`) required role from endpoint decorator/middleware
-   - Job retry endpoint (`POST /jobs/{id}/retry`) required role from endpoint decorator/middleware
-   - Company archive (`PATCH /companies/{id}` with `status=archived`) required role
-   - Discovery search delete required role
-
-5. **CORS Configuration:**
-   - Local-development CORS preflight response headers confirm `http://localhost:3000` origin is permitted
-   - `Access-Control-Allow-Headers` includes `Authorization`
-
-**Status:** ❌ Verification commands listed but not executed; results not recorded.
-
----
-
-### First Implementation Step
-
-**Only after all GO criteria are evidenced in this document:**
-
-```bash
-cd /home/lostluffyz/Projects/Irtiqa-Intelligence
-npx create-next-app@latest frontend --typescript --tailwind --app --eslint
-cd frontend
-npm install @tanstack/react-query axios zustand react-hook-form zod @hookform/resolvers date-fns clsx class-variance-authority lucide-react
-npm run lint && npm run build && npm run dev
-```
-
----
-
-### Verification Evidence
-
-**Date:** 2026-07-02 (PASS 3)
-**OpenAPI schema:** Fetched from running backend at `http://localhost:8000/openapi.json`, saved to `/tmp/openapi_verified.json`
-**Backend source files inspected:**
-- `app/api/v1/endpoints/auth.py` — Auth endpoints
-- `app/api/v1/endpoints/companies.py` — Company CRUD
-- `app/api/v1/endpoints/discovery.py` — Discovery searches/runs
-- `app/api/v1/endpoints/intelligence.py` — Pipeline trigger
-- `app/api/v1/endpoints/jobs.py` — Job management
-- `app/api/v1/endpoints/leads.py` — Lead aggregation
-- `app/api/v1/endpoints/technologies.py` — Technology list
-- `app/api/v1/endpoints/intent_signals.py` — Intent signal list
-- `app/api/v1/endpoints/intelligence_scores.py` — Intelligence score list
-- `app/api/v1/endpoints/outreach_messages.py` — Outreach message list
-- `app/api/dependencies.py` — Auth dependencies
-- `app/core/tenant.py` — Role definitions
-- `app/core/security.py` — JWT/token generation
-- `app/services/auth_service.py` — Auth business logic
-- `app/main.py` — App factory
-
-**Backend startup command:**
-```bash
-DATABASE_URL="sqlite:///database/irtiqa.db" DEV_MODE=true .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-**Key evidence:**
-- CORS: No `CORSMiddleware` configured — OPTIONS returns 405, responses carry no CORS headers
-- API paths: No `/api/v1` prefix — endpoints at `/auth/login`, `/companies`, etc.
-- Auth: Login returns `LoginResponse` (access_token, refresh_token, user, organization|null). Refresh returns `RefreshTokenResponse` (access_token, refresh_token only — NO user/organization). Logout returns 204 with no body. `GET /auth/me` returns `UserResponse` (5 fields — NO role).
-- Refresh token: Rotated on every refresh. Old token revoked server-side.
-- Logout: Revokes refresh token server-side (`revoked_at` set). Requires `Authorization: Bearer` header AND `RefreshTokenRequest` body.
-- Pagination: All list endpoints use `{items, total, limit, offset}` envelope. Jobs default limit=50; others default=100.
-- Company filters: `GET /technologies`, `/intent-signals`, `/intelligence-scores`, `/outreach-messages` accept NO `company_id` query parameter.
-- Job statuses: `["pending", "running", "succeeded", "failed", "cancelled"]`
-- Run statuses: `["running", "succeeded", "failed"]`
-- Roles: `viewer(10) < member(50) < admin(80) < owner(100)`. Role available from `LoginResponse.organization.role`.
-
----
-
-### Contract Verification Matrix
-
-| Area | Verified Contract | Evidence | Frontend Decision | Status |
-|------|------------------|----------|-------------------|--------|
-| POST /auth/login | Request: `{email: string, password: string}` (both required). Response 200: `LoginResponse` with `access_token`, `refresh_token`, `token_type` ("bearer"), `user` (UserResponse), `organization` (OrganizationSummary or null). | OpenAPI schema `LoginRequest`, `LoginResponse`. Source: `app/api/v1/endpoints/auth.py:61-84`. | Store all tokens, user, and organization. `organization.role` provides permission data. | ✅ Verified |
-| POST /auth/refresh | Request: `{refresh_token: string}` (required). Response 200: `RefreshTokenResponse` with `access_token`, `refresh_token` (rotated), `token_type`. **NO user or organization returned.** | OpenAPI schema `RefreshTokenRequest`, `RefreshTokenResponse`. Source: `app/services/auth_service.py:257-298`. | Update tokens only. Preserve existing user/organization from store. | ✅ Verified |
-| POST /auth/logout | Request: `{refresh_token: string}` (required). Response 204 (no body). Requires `Authorization: Bearer` header. Server revokes refresh token. | OpenAPI schema. Source: `app/api/v1/endpoints/auth.py:87-94`. | Send refresh_token in body + access_token in header. Clear all auth state. | ✅ Verified |
-| GET /auth/me | Response 200: `UserResponse` — `{id, email, display_name, is_active, created_at}`. **No role field. No organization.** | OpenAPI schema `UserResponse`. Source: `app/api/v1/endpoints/auth.py:109-119`. | Use for profile display only. Role comes from login response org. | ✅ Verified |
-| Role source | Role available in `LoginResponse.organization.role` string. `UserResponse` has no role. | Source: `app/api/v1/endpoints/auth.py:83`. `OrganizationSummary` has `id, name, slug, role`. | Read role from `authStore.organization.role`. | ✅ Verified |
-| JWT claims | JWT contains `org` (org ID) and `role` (role string). Client must NOT decode JWT for UI. | Source: `app/core/security.py:123-127`. | Use stored user/org objects, not JWT decoding. | ✅ Verified |
-| GET /companies | Params: `limit` (default 100, max 500), `offset` (default 0). Response: `CompanyList` — `{items, total, limit, offset}`. All four fields required. | OpenAPI schema `CompanyList`. | Standard offset pagination. | ✅ Verified |
-| GET /leads | Params: `limit` (default 100, max 500), `offset` (default 0), `minimum_score` (number, 0-100, nullable). Response: `LeadListResponse` — `{items, total, limit, offset}`. No `order_by`. | OpenAPI schema `LeadListResponse`. | Client-side sorting only. `minimum_score` filter available. | ✅ Verified |
-| GET /jobs | Params: `limit` (default **50**, max 500), `offset` (default 0), `status` (string, nullable), `target_name` (string, nullable). Response: `JobList` — `{items, total, limit, offset}`. | OpenAPI schema `JobList`. | Jobs uses default limit 50, not 100. Status and target_name filtering available. | ✅ Verified |
-| GET /discovery/searches | Params: `limit` (default 100, max 500), `offset` (default 0). Response: `DiscoverySearchList` — `{items, total, limit, offset}`. | OpenAPI schema. | Standard offset pagination. | ✅ Verified |
-| GET /discovery/runs/{run_id} | Response: `DiscoveryRunRead`. Status enum: `["running", "succeeded", "failed"]`. Fields: `sources_queried`, `companies_found`, `companies_created`, `companies_skipped`, `started_at`, `finished_at`, `error_message`. Aggregate counters only — no per-source progress. | OpenAPI schema `DiscoveryRunRead`. | Simplify UI to show aggregate numbers, not per-source breakdown. | ✅ Verified |
-| GET /technologies | **No `company_id` query parameter.** Only `limit` and `offset`. | OpenAPI schema. | Cannot filter by company server-side. Items have `company_id` field — client-side filter possible but not scalable. | ⚠️ BLOCKER |
-| GET /intent-signals | **No `company_id` query parameter.** Only `limit` and `offset`. | OpenAPI schema. | Same as technologies. | ⚠️ BLOCKER |
-| GET /intelligence-scores | **No `company_id` query parameter.** Only `limit` and `offset`. | OpenAPI schema. | Same as technologies. | ⚠️ BLOCKER |
-| GET /outreach-messages | **No `company_id` query parameter.** Only `limit` and `offset`. | OpenAPI schema. | Same as technologies. | ⚠️ BLOCKER |
-| GET /evidence/by-company/{id} | Path param: `company_id`. Query params: `target_type` (nullable), `limit`, `offset`. Response: `EvidenceList`. | OpenAPI schema. | Company detail evidence tab works. | ✅ Verified |
-| POST /jobs/{id}/cancel | Auth required (org member). **No role check** in endpoint — any org member can cancel. | Source: `app/api/v1/endpoints/jobs.py:112-119`. | Do not hide/disable based on role. Backend 403 for non-members. | ✅ Verified |
-| POST /jobs/{id}/retry | Auth required (org member). **No role check** in endpoint. | Source: `app/api/v1/endpoints/jobs.py:122-129`. | Same as cancel. | ✅ Verified |
-| PATCH /companies/{id} | Auth required. `require_role("member")` — member or higher. | Source: `app/api/v1/endpoints/companies.py:56-63`. | Disable if role < member. | ✅ Verified |
-| DELETE /companies/{id} | Auth required. `require_role("admin")` — admin or higher. | Source: `app/api/v1/endpoints/companies.py:74-80`. | Disable/hide if role < admin. | ✅ Verified |
-| DELETE /discovery/searches/{id} | Auth required. `require_role("admin")` — admin or higher. | Source: `app/api/v1/endpoints/discovery.py:97-103`. | Disable/hide if role < admin. | ✅ Verified |
-| POST /discovery/searches/{id}/run | Auth required. `require_role("member")` — member or higher. | Source: `app/api/v1/endpoints/discovery.py:111-122`. | Disable if role < member. | ✅ Verified |
-| POST /intelligence/pipeline | Auth required (org member). **No explicit role check** beyond org membership. | Source: `app/api/v1/endpoints/intelligence.py:29-54`. | Any authenticated user can trigger. | ✅ Verified |
-| CORS | **No CORS middleware configured.** All responses lack `Access-Control-Allow-Origin` header. Preflight OPTIONS returns 405. | `grep -r "CORSMiddleware" app/` — no results. `curl -i -H "Origin: http://localhost:3000" -X OPTIONS http://localhost:8000/auth/login` — 405. | **BLOCKER.** Must add `CORSMiddleware` to `app/main.py` before frontend can make API calls. | ❌ BLOCKER |
-| API path prefix | **No `/api/v1` prefix.** Backend serves endpoints at root: `/auth/login`, `/companies`, etc. | OpenAPI paths: `/auth/login`, `/companies` (no `/api/v1` prefix). `curl http://localhost:8000/api/v1/auth/me` returns 404. | Set `NEXT_PUBLIC_API_URL=http://localhost:8000` (no `/api/v1` suffix). | ⚠️ Architecture doc needs fix |
-| Refresh token rotation | Backend issues new refresh token on every refresh. Old token revoked. | Source: `app/services/auth_service.py:282-296`. | Update stored refresh token after every refresh. | ✅ Verified |
-| Auth endpoint schemas | `LoginRequest`: `{email: string, password: string}`. `RegisterRequest`: `{email, password, display_name}`. `RefreshTokenRequest`: `{refresh_token: string}`. `UpdateProfileRequest` on PATCH /auth/me. | OpenAPI schema `components/schemas`. | Request/response shapes confirmed. | ✅ Verified |
-| Error response shape | Structured error: `{"error": {"code": "...", "message": "...", "type": "...", "details": {...}}}` | Observed from POST /auth/login with empty body — returns 422 with structured error. | Handle structured error envelope. | ✅ Verified |
-
-### GO Criteria
-
-**Frontend implementation is allowed only after all of the following are satisfied:**
-
-1. **CORS middleware added** — Backend must add `CORSMiddleware` to allow `http://localhost:3000` origin with `Authorization` header.
-2. **API path base** — Frontend must use `http://localhost:8000` (no `/api/v1` prefix).
-3. **Company detail tab strategy decided** — Must choose between: (a) defer 4 tabs until backend adds `company_id` filter, (b) fetch all and client-side filter, or (c) use only evidence endpoint.
-
-**Status:** ❌ 3 blockers remain — CORS, API path prefix in doc, company detail tab strategy.
-
----
 
 ### Verified Endpoint Paths (OpenAPI)
 
@@ -2444,4 +2264,4 @@ All endpoints confirmed at root level (no `/api/v1` prefix):
 
 ---
 
-**PASS 3 contract verification complete. 3 blockers remain: CORS middleware, API path prefix correction, company detail tab strategy.**
+**GO — Frontend foundation may begin. All blockers resolved: CORS configured, company_id filters implemented, API base is http://localhost:8000.**

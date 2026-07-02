@@ -36,6 +36,7 @@ class BaseRepository(Generic[ModelT]):
         self,
         *,
         organization_id: str | None = None,
+        company_id: str | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[ModelT]:
@@ -45,13 +46,21 @@ class BaseRepository(Generic[ModelT]):
         )
         statement = select(self.model)
         statement = self._apply_tenant_filter(statement, organization_id)
+        statement = self._apply_company_filter(statement, company_id)
         self._check_tenant_filter(statement, organization_id)
         statement = statement.offset(offset).limit(limit)
         return self.session.scalars(statement).all()
 
-    def count(self) -> int:
+    def count(
+        self,
+        *,
+        organization_id: str | None = None,
+        company_id: str | None = None,
+    ) -> int:
         self.logger.debug("Counting entities", extra={"model": self.model.__name__})
         statement = select(func.count()).select_from(self.model)
+        statement = self._apply_tenant_filter(statement, organization_id)
+        statement = self._apply_company_filter(statement, company_id)
         return self.session.scalar(statement) or 0
 
     def delete(self, entity: ModelT) -> None:
@@ -60,6 +69,20 @@ class BaseRepository(Generic[ModelT]):
 
     def exists(self, entity_id: str) -> bool:
         return self.get(entity_id) is not None
+
+    def _apply_company_filter(
+        self,
+        statement: Select[tuple[ModelT]],
+        company_id: str | None = None,
+    ) -> Select[tuple[ModelT]]:
+        """Add ``company_id = :company_id`` to the WHERE clause.
+
+        Only applies when the model has a ``company_id`` column.
+        If ``company_id`` is ``None``, no filter is added.
+        """
+        if company_id is not None and hasattr(self.model, "company_id"):
+            return statement.where(self.model.company_id == company_id)
+        return statement
 
     def _apply_tenant_filter(
         self,

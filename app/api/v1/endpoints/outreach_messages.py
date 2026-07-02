@@ -31,13 +31,22 @@ def create_outreach_message(
 def list_outreach_messages(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    company_id: str | None = Query(default=None),
     tenant: TenantContext = Depends(get_current_organization),
     service: OutreachMessageService = Depends(get_outreach_message_service),
 ) -> OutreachMessageList:
-    outreach_messages = service.list(organization_id=tenant.organization_id, limit=limit, offset=offset)
+    outreach_messages = service.list(
+        organization_id=tenant.organization_id,
+        company_id=company_id,
+        limit=limit,
+        offset=offset,
+    )
     return OutreachMessageList(
         items=[OutreachMessageRead.model_validate(m) for m in outreach_messages],
-        total=len(outreach_messages),
+        total=service.count(
+            organization_id=tenant.organization_id,
+            company_id=company_id,
+        ),
         limit=limit,
         offset=offset,
     )

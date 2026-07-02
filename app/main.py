@@ -6,6 +6,7 @@ from typing import AsyncContextManager
 import asyncio
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.errors import register_exception_handlers
 from app.api.router import api_router
@@ -53,6 +54,17 @@ def create_app(
         ),
     )
     app.state.settings = app_settings
+
+    # CORS configuration for frontend dev server
+    # Using explicit origins (not wildcard) when credentials are enabled
+    # to prevent credential leakage to unauthorized origins.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=app_settings.cors.origin_list,
+        allow_credentials=app_settings.cors.allow_credentials,
+        allow_methods=app_settings.cors.method_list,
+        allow_headers=app_settings.cors.header_list,
+    )
 
     register_exception_handlers(app)
     app.include_router(api_router)
