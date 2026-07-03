@@ -316,7 +316,7 @@ const navigation = [
 **Row Actions:**
 - View Details → `/companies/{id}`
 - Trigger Enrichment (if status=needs_review) → Calls `POST /intelligence/pipeline`
-- Archive (admin+) → `PATCH /companies/{id}` with `status=archived`
+- Archive (member+) → `PATCH /companies/{id}` with `status=archived`
 
 **Empty State:**
 - "No companies yet. Run a discovery search to find companies matching your ICP."
@@ -347,8 +347,8 @@ const navigation = [
 ├─────────────────────────────────────────────────────────┤
 │  Overview:                                                │
 │  - Intelligence Score: 89.2 / 100                         │
-│    - Fit Score: 92.0 (industry + size match)             │
-│    - Intent Score: 86.4 (hiring + funding signals)       │
+│    - Opportunity Score: 92.0 (industry + size match)      │
+│    - Urgency Score: 86.4 (hiring + funding signals)      │
 │  - Description: {company.description}                     │
 │  - LinkedIn: {company.linkedin_url}                       │
 │                                                           │
@@ -372,7 +372,7 @@ const navigation = [
 **Actions:**
 - "Trigger Re-Enrichment" (member+) → `POST /intelligence/pipeline` with company_id
 - "Edit Company" (member+) → Inline edit or modal
-- "Archive" (admin+) → `PATCH /companies/{id}` with `status=archived`
+- "Archive" (member+) → `PATCH /companies/{id}` with `status=archived`
 
 **Data Loading Strategy:**
 - Show company header immediately (from initial fetch)
@@ -393,7 +393,7 @@ const navigation = [
 - Score filter slider: Minimum Score (0-100, default 70) — uses `?minimum_score=` parameter (verified)
 - Card grid or table:
   - Company Name, Domain, Industry
-  - Score badges: Total / Fit / Intent
+  - Score badges: Total / Opportunity / Urgency
   - Top 3 technologies (icons or text)
   - Top 2 intent signals (truncated)
   - "View Details" button → `/companies/{id}`
@@ -1710,7 +1710,7 @@ NEXT_PUBLIC_DEV_MODE=true
 ```typescript
 // lib/api/client.ts
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
 });
 ```
 
@@ -2072,13 +2072,12 @@ npm run dev
 - **Inspect generated structure** — Latest Next.js may change file organization, config formats, or directory structure
 - **Preserve all generated files** — Do not delete or restructure without understanding their purpose
 - **Configuration files** — May include `next.config.js`, `next.config.mjs`, `next.config.ts`, or newer formats; `tailwind.config.js`, `tailwind.config.ts`, or newer; ESLint config may be `.eslintrc.json`, `eslint.config.js`, or newer flat config
-- **Middleware** — Check generated project docs for current Next.js middleware patterns before adding auth route protection (patterns change between major versions)
+- **Middleware** — Do not add Next.js server middleware or proxy for authentication in this MVP. The refresh_token is held in localStorage and is not server-readable, so server-side middleware cannot validate sessions. Route protection is client-side only, after Zustand hydration and refresh bootstrap.
 
 **Next Steps After Verification:**
 1. **Inspect generated project structure** — Confirm actual file names, config formats, and conventions
 2. **Read generated README.md** — Follow any setup instructions specific to the generated version
-3. **Do not add server middleware/proxy for authentication in this MVP** — Client-side protection occurs only after Zustand hydration and refresh bootstrap. Revisit server-side auth protection only if the backend moves to httpOnly cookies or another server-readable session mechanism.
-4. Commit the initialized project
+3. Commit the initialized project
 5. Begin Phase 1 (Auth + Layout) implementation
 6. Follow the 14-commit phased plan
 
@@ -2088,7 +2087,7 @@ npm run dev
 
 This architecture document defines a contract-first MVP frontend for Irtiqa Intelligence that:
 
-1. **Verifies all backend contracts** — All endpoint paths, query parameters, and response shapes must be confirmed against OpenAPI schema before implementation
+1. **Verifies all backend contracts** — All endpoint contracts listed in Section 18 have been verified against the OpenAPI schema and backend source code as of 2026-07-02. Any future backend changes must be re-verified against OpenAPI before updating frontend implementation
 2. **Follows modern React best practices** — Next.js App Router, TanStack Query, Zustand, TypeScript
 3. **Prioritizes user experience** — Clear error states, loading skeletons, empty states, permission checks, minimal responsive support
 4. **Maintains architectural consistency** — Clear separation of server/UI/auth state, verified API endpoint mapping
@@ -2099,7 +2098,7 @@ Login → Dashboard → Define ICP → Run Discovery → Review Companies → Tr
 
 **Time to First Value:** <5 minutes from signup to first scored lead.
 
-**Next Step:** Verify all endpoint contracts in section 5 against `/openapi.json` before beginning implementation.
+**Next Step:** Contracts are verified. Begin Phase 0 project initialization.
 
 ---
 
@@ -2160,13 +2159,13 @@ The following features are **not included in MVP** because backend support is un
 
 | Area | Verified Contract | Evidence | Frontend Decision | Status |
 |------|------------------|----------|-------------------|--------|
-| **API base path** | No `/api/v1` prefix. All endpoints served at root (e.g., `/auth/login`). `NEXT_PUBLIC_API_URL=http://localhost:8000` | OpenAPI schema paths: `/auth/login`, `/companies`, `/leads` — no `/api/v1` prefix. `curl http://localhost:8000/auth/me` returns `401`. `curl http://localhost:8000/api/v1/auth/me` returns `404`. | Set `NEXT_PUBLIC_API_URL=http://localhost:8000` (no `/api/v1` suffix). | ✅ Verified — **must fix** |
+| **API base path** | No `/api/v1` prefix. All endpoints served at root (e.g., `/auth/login`). `NEXT_PUBLIC_API_URL=http://localhost:8000` | OpenAPI schema paths: `/auth/login`, `/companies`, `/leads` — no `/api/v1` prefix. `curl http://localhost:8000/auth/me` returns `401`. `curl http://localhost:8000/api/v1/auth/me` returns `404`. | Set `NEXT_PUBLIC_API_URL=http://localhost:8000` (no `/api/v1` suffix). | ✅ Verified |
 | **CORS** | `CORSMiddleware` configured in `app/main.py` via `CORSSettings` in `app/core/config.py`. Allows `http://localhost:3000` origin with `Authorization` and `Content-Type` headers. `allow_credentials=True`. Config-driven via env vars (`CORS_ALLOWED_ORIGINS`, `CORS_ALLOW_CREDENTIALS`, `CORS_ALLOW_METHODS`, `CORS_ALLOW_HEADERS`). Production safe: only explicit origins, no wildcards. | OPTIONS preflight to `/auth/login` and `/companies` returns `200` with `Access-Control-Allow-Origin: http://localhost:3000`, `Access-Control-Allow-Credentials: true`. Tests pass. | Frontend at `localhost:3000` can call backend at `localhost:8000`. Axios `withCredentials` should be `true` if needed. | ✅ Verified |
 | **POST /auth/login** | Request: `{email: string, password: string}` (both required). Response 200: `LoginResponse` with `access_token`, `refresh_token`, `token_type` (default "bearer"), `user: UserResponse` (required), `organization: OrganizationSummary \| null` (nullable). | OpenAPI schema `LoginRequest` (required: email, password), `LoginResponse` (required: access_token, refresh_token, user; organization nullable). Source: `app/api/v1/endpoints/auth.py:61-84`. | Store access_token in memory, refresh_token in localStorage. Store user and organization from response. | ✅ Verified |
-| **POST /auth/refresh** | Request: `{refresh_token: string}` (required, minLength=1). Response 200: `RefreshTokenResponse` with `access_token`, `refresh_token` (rotated), `token_type`. **NO user/organization in response.** | OpenAPI schema `RefreshTokenRequest` (required: refresh_token), `RefreshTokenResponse` (required: access_token, refresh_token). Source: `app/api/v1/endpoints/auth.py:97-106`, `app/services/auth_service.py:257-298` (revokes old, issues new). | On refresh: update access_token and refresh_token only. **Do NOT clear user/org from store** — they remain from the login response. | ✅ Verified — **must fix doc** |
+| **POST /auth/refresh** | Request: `{refresh_token: string}` (required, minLength=1). Response 200: `RefreshTokenResponse` with `access_token`, `refresh_token` (rotated), `token_type`. **NO user/organization in response.** | OpenAPI schema `RefreshTokenRequest` (required: refresh_token), `RefreshTokenResponse` (required: access_token, refresh_token). Source: `app/api/v1/endpoints/auth.py:97-106`, `app/services/auth_service.py:257-298` (revokes old, issues new). | On refresh: update access_token and refresh_token only. **Do NOT clear user/org from store** — they remain from the login response. | ✅ Verified |
 | **Refresh token rotation** | Backend revokes old token, issues new one on every refresh call. | Source: `app/services/auth_service.py:281-296` — old token set `revoked_at`, new token created. | Update stored refresh_token on every refresh response. | ✅ Verified |
 | **POST /auth/logout** | Request: `{refresh_token: string}` (required). Response: `204 No Content` (no body). Requires `Authorization: Bearer` header. Server-side: revokes the refresh token in DB. | OpenAPI schema: `RefreshTokenRequest`, status 204. Source: `app/api/v1/endpoints/auth.py:87-94`, `app/services/auth_service.py:240-253` (sets `revoked_at`). | Send refresh_token in body + access_token in header. Clear all auth state on success. | ✅ Verified |
-| **GET /auth/me** | Response 200: `UserResponse` with fields: `id`, `email`, `display_name`, `is_active`, `created_at`. **NO role field. NO organization/membership info.** Requires `Authorization: Bearer` header. | OpenAPI schema `UserResponse` (5 required fields). Source: `app/api/v1/endpoints/auth.py:109-119`. | Use for profile screen only. Role data comes from `LoginResponse.organization.role`, not `/auth/me`. | ✅ Verified — **must fix doc** |
+| **GET /auth/me** | Response 200: `UserResponse` with fields: `id`, `email`, `display_name`, `is_active`, `created_at`. **NO role field. NO organization/membership info.** Requires `Authorization: Bearer` header. | OpenAPI schema `UserResponse` (5 required fields). Source: `app/api/v1/endpoints/auth.py:109-119`. | Use for profile screen only. Role data comes from `LoginResponse.organization.role`, not `/auth/me`. | ✅ Verified |
 | **GET /companies** | Query params: `limit` (default 100, 1–500), `offset` (default 0, ≥0). Response: `CompanyList` with `total`, `limit`, `offset`, `items: CompanyRead[]`. No `?status=`, `?search=`, `?order_by=` params. | OpenAPI schema. Source: `app/api/v1/endpoints/companies.py:25-38`. | Pagination is offset-based. `total` is the full count. Client-side filtering by status only. | ✅ Verified |
 | **CompanyRead fields** | `id`, `created_at`, `updated_at`, `name`, `domain`, `industry` (nullable), `company_size` (nullable), `headquarters` (nullable), `description` (nullable), `linkedin_url` (nullable), `status` (enum: "active", "needs_review", "archived"). All required. | OpenAPI schema `CompanyRead`. | All fields available for display. Status is a required string enum. | ✅ Verified |
 | **GET /leads** | Query params: `limit` (default 100, 1–500), `offset` (default 0, ≥0), `minimum_score` (number 0–100, nullable). No `?order_by=` param. Response: `LeadListResponse` with `total`, `limit`, `offset`, `items: LeadResponse[]`. | OpenAPI schema. Source: `app/api/v1/endpoints/leads.py:14-20`. | `minimum_score` filter is verified. Client-side sorting only. | ✅ Verified |
