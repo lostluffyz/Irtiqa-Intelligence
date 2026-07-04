@@ -55,6 +55,40 @@ function formatDateTime(iso: string | null): string {
   }
 }
 
+/* ── Error message extraction ──────────────────────────────────────────── */
+
+/**
+ * Safely extract a user-safe error message from a job's last_error field.
+ *
+ * The backend may store errors in various formats (Python dict repr, JSON, or
+ * plain text). This function only extracts a concise `message` value from
+ * known structured formats. Raw payloads, organisation IDs, exception class
+ * names, and stack traces are never rendered.
+ *
+ * Returns a safe message string, or null if none could be extracted.
+ */
+function parseJobErrorMessage(raw: string | null): string | null {
+  if (!raw) return null;
+
+  // Try JSON format: {"message": "..."} or {"error": {"message": "..."}}
+  try {
+    const parsed = JSON.parse(raw);
+    const msg = parsed?.message ?? parsed?.error?.message;
+    if (typeof msg === 'string' && msg.length > 0) return msg;
+  } catch {
+    // Not valid JSON — try Python repr next
+  }
+
+  // Try Python dict repr: {'message': '...'}
+  // This handles the case where the backend does str({"code":..., "message":...})
+  const pyMatch = raw.match(/'message':\s*'([^']+)'/);
+  if (pyMatch && pyMatch[1].length > 0) {
+    return pyMatch[1];
+  }
+
+  return null;
+}
+
 /**
  * Safely parse the payload JSON string to extract known fields.
  * Returns an object with the discovery search ID and run ID if present.
@@ -187,6 +221,7 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
   };
 
   const { searchId, runId } = job ? parseJobPayload(job.payload) : { searchId: null, runId: null };
+  const safeErrorMessage = job ? parseJobErrorMessage(job.last_error) : null;
 
   /* ── Loading ── */
   if (isLoading && !job) {
@@ -381,14 +416,15 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
         )}
 
         {/* Error */}
-        {job.status === 'failed' && job.last_error && (
+        {job.status === 'failed' && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-6">
             <h3 className="mb-2 text-sm font-semibold text-red-900">
               Error
             </h3>
             <div className="rounded-md border border-red-200 bg-white px-4 py-3">
               <p className="whitespace-pre-wrap text-sm text-red-800">
-                {job.last_error}
+                {safeErrorMessage ??
+                  'This job could not be completed. Review the job details or try running the discovery search again.'}
               </p>
             </div>
           </div>
