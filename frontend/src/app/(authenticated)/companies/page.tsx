@@ -3,6 +3,7 @@
 import { useEffect, useReducer, useState } from 'react';
 import Link from 'next/link';
 
+import { AxiosError } from 'axios';
 import { CompaniesIcon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,27 @@ const STATUS_STYLES: Record<CompanyRead['status'], string> = {
 };
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
+
+/**
+ * Extract a user-friendly error message from a failed API call.
+ * For 403 errors the backend detail is authoritative — surface it.
+ * For everything else fall back to a generic message.
+ */
+function getUserFriendlyError(err: unknown): string {
+  if (err instanceof AxiosError && err.response) {
+    const detail =
+      (err.response.data as { detail?: string })?.detail;
+    if (err.response.status === 403) {
+      return (
+        detail ??
+        "You don't have permission to view companies in this organization."
+      );
+    }
+    return detail ?? 'An unexpected error occurred. Please try again.';
+  }
+  if (err instanceof Error) return err.message;
+  return 'An unexpected error occurred. Please try again.';
+}
 
 function formatDate(iso: string): string {
   try {
@@ -158,10 +180,7 @@ export default function CompaniesPage() {
         if (!cancelled) {
           dispatch({
             type: 'FETCH_ERROR',
-            error:
-              err instanceof Error
-                ? err
-                : new Error('Failed to load companies'),
+            error: new Error(getUserFriendlyError(err)),
           });
         }
       });
