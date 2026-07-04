@@ -57,6 +57,69 @@ export interface RefreshTokenResponse {
  */
 export type LogoutResponse = void;
 
+/* ── Discovery ──────────────────────────────────────────────────────────── */
+
+/**
+ * Verified from OpenAPI schemas for POST /discovery/searches request,
+ * POST /discovery/searches/{search_id}/run response, and related endpoints.
+ *
+ * DiscoverySearchCriteria — used inline within DiscoverySearchCreate and
+ * DiscoverySearchRead.
+ */
+export interface DiscoverySearchCriteria {
+  industry: string;
+  company_size_min?: number | null;
+  company_size_max?: number | null;
+  geography?: string | null;
+  technologies?: string[];
+  keywords: string[];
+  exclude_domains?: string[];
+  sources?: string[];
+}
+
+export interface DiscoverySearchCreate {
+  name: string;
+  description?: string | null;
+  criteria: DiscoverySearchCriteria;
+  status?: 'active' | 'archived';
+}
+
+export interface DiscoverySearchRead {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  name: string;
+  description: string | null;
+  criteria: DiscoverySearchCriteria;
+  status: 'active' | 'archived';
+  last_run_at: string | null;
+  total_discovered: number;
+}
+
+export interface DiscoverySearchList {
+  total: number;
+  limit: number;
+  offset: number;
+  items: DiscoverySearchRead[];
+}
+
+export interface DiscoveryRunRead {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  search_id: string;
+  status: 'running' | 'succeeded' | 'failed';
+  sources_queried: number;
+  companies_found: number;
+  companies_created: number;
+  companies_skipped: number;
+  started_at: string;
+  finished_at: string | null;
+  error_message: string | null;
+}
+
 /**
  * Typed backend error envelope. Observed on validation failures (422) and other
  * structured errors. Optional `fields` / `details` accommodate error variants.
