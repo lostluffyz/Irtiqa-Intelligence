@@ -281,8 +281,19 @@ class AuthService(BaseService[User, UserRepository]):
             # Revoke old token
             token.revoked_at = datetime.now(timezone.utc)
 
-            # Issue new tokens
-            new_access = create_access_token(user_id=token.user_id)
+            # Look up the user's current membership so the new access token
+            # carries the same org context and role as the original login.
+            mem_repo = MembershipRepository(session)
+            memberships = mem_repo.list_user_memberships(token.user_id, limit=1)
+            org_id = memberships[0].organization_id if memberships else None
+            org_role = memberships[0].role if memberships else None
+
+            # Issue new tokens carrying org context
+            new_access = create_access_token(
+                user_id=token.user_id,
+                organization_id=org_id,
+                role=org_role,
+            )
             new_raw, new_hashed = generate_refresh_token()
 
             session.add(

@@ -312,6 +312,26 @@ class TestRefresh:
         resp2 = client.get("/auth/me", headers={"Authorization": f"Bearer {new_data['access_token']}"})
         assert resp2.status_code == 200
 
+    def test_refreshed_token_has_org_scoping(self, client: TestClient) -> None:
+        """Refreshed access token must carry org context so that
+        org-scoped endpoints (e.g. GET /companies) do not 403."""
+        _register_and_verify(client)
+        data = _login(client)
+        refresh = data["refresh_token"]
+
+        resp = client.post("/auth/refresh", json={"refresh_token": refresh})
+        assert resp.status_code == 200
+        new_data = resp.json()
+
+        # Use the refreshed token against an org-scoped endpoint
+        resp2 = client.get(
+            "/companies",
+            headers={"Authorization": f"Bearer {new_data['access_token']}"},
+        )
+        assert resp2.status_code == 200, (
+            f"Refreshed token should work for /companies, got {resp2.status_code}: {resp2.text}"
+        )
+
     def test_old_token_revoked_after_refresh(self, client: TestClient) -> None:
         _register_and_verify(client)
         data = _login(client)
