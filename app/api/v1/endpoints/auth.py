@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.api.dependencies import get_auth_service, get_current_user
 from app.core.config import get_settings
+from app.core.logging import get_logger
 from app.core.security import get_jwks
 from app.schemas.auth import (
     JWKSResponse,
@@ -22,6 +23,8 @@ from app.services.auth_service import AuthService
 
 router = APIRouter(tags=["auth"])
 
+logger = get_logger("endpoints.auth")
+
 
 @router.post("/auth/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 def register(
@@ -36,6 +39,7 @@ def register(
     token = auth_service.get_verification_token(user)
     settings = get_settings()
     if settings.auth.dev_mode:
+        logger.info("Dev mode — email verification token: %s", token)
         message = f"Account created. Verify your email. Token: {token}"
     else:
         message = "Account created. Verify your email to activate."

@@ -124,6 +124,59 @@ class TestRegister:
             assert user.is_active is False
             assert user.email_verified_at is None
 
+    def test_dev_mode_logs_verification_token(self, client: TestClient) -> None:
+        """Registration in dev mode writes the verification token to the server log.
+
+        We attach a ``StringIO`` handler to the ``irtiqa`` logger because the
+        test client has ``configure_logging_on_startup=False`` (the default
+        WARNING-level root logger would suppress INFO-level messages).
+        """
+        import io, logging
+
+        buf = io.StringIO()
+        logger = logging.getLogger("irtiqa")
+        logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler(buf)
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        logger.addHandler(handler)
+
+        # Sanity check: verify our handler captures log records before the
+        # actual registration call.  This isolates logger-hierarchy issues
+        # from request-handling concerns.
+        auth_logger = logging.getLogger("irtiqa.endpoints.auth")
+        logger.info("direct-on-irtiqa")
+        auth_logger.info("via-child-logger")
+        preflight = buf.getvalue()
+        assert "via-child-logger" in preflight, (
+            f"Handler not receiving records via child logger.  Details:\n"
+            f"  irtiqa: level={logger.level} handlers={logger.handlers} "
+            f"propagate={logger.propagate} disabled={logger.disabled}\n"
+            f"  irtiqa.endpoints.auth: level={auth_logger.level} "
+            f"effective={auth_logger.getEffectiveLevel()} "
+            f"propagate={auth_logger.propagate} "
+            f"disabled={auth_logger.disabled} "
+            f"handlers={auth_logger.handlers}\n"
+            f"  irtiqa.endpoints: "
+            f"level={logging.getLogger('irtiqa.endpoints').level} "
+            f"propagate={logging.getLogger('irtiqa.endpoints').propagate}\n"
+            f"  preflight={repr(preflight)}"
+        )
+
+        try:
+            data = _register(client, email="dev-log@example.com")
+            response_token = data["message"].split("Token: ")[1].strip()
+            log_output = buf.getvalue()
+            assert response_token in log_output, (
+                f"Token {response_token[:12]}... not found in log output:\n"
+                f"{'─' * 40}\n"
+                f"{log_output}"
+                f"{'─' * 40}\n"
+                f"(preflight was OK)"
+            )
+        finally:
+            logger.removeHandler(handler)
+
 
 # ── Email Verification Tests ─────────────────────────────────────────────────
 
