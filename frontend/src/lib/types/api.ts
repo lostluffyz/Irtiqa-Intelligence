@@ -69,3 +69,34 @@ export interface ApiErrorResponse {
     details?: Record<string, unknown>;
   };
 }
+
+/* ── Companies ──────────────────────────────────────────────────────────── */
+
+/**
+ * Verified from OpenAPI GET /companies response items and GET /companies/{company_id}.
+ * All fields are required (nullable fields use `| null`).
+ */
+export interface CompanyRead {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  name: string;
+  domain: string;
+  industry: string | null;
+  company_size: string | null;
+  headquarters: string | null;
+  description: string | null;
+  linkedin_url: string | null;
+  status: 'active' | 'needs_review' | 'archived';
+}
+
+/**
+ * Verified from OpenAPI GET /companies response.
+ * Envelope — all fields required.
+ */
+export interface CompanyList {
+  total: number;
+  limit: number;
+  offset: number;
+  items: CompanyRead[];
+}
