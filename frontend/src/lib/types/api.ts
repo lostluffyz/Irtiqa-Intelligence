@@ -133,6 +133,39 @@ export interface ApiErrorResponse {
   };
 }
 
+/* ── Jobs ────────────────────────────────────────────────────────────────── */
+
+/**
+ * Verified from OpenAPI schemas for GET /jobs, GET /jobs/{job_id},
+ * and related endpoints.
+ */
+export type JobStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+export type JobType = 'agent' | 'workflow';
+
+export interface JobRead {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  job_type: JobType;
+  target_name: string;
+  payload: string;
+  status: JobStatus;
+  scheduled_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  retry_count: number;
+  max_retries: number;
+  last_error: string | null;
+  agent_run_id: string | null;
+}
+
+export interface JobList {
+  total: number;
+  limit: number;
+  offset: number;
+  items: JobRead[];
+}
+
 /* ── Companies ──────────────────────────────────────────────────────────── */
 
 /**
