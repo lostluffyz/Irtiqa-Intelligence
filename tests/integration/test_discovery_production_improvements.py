@@ -118,7 +118,8 @@ def test_batch_domain_checking_tenant_isolation(
     assert result == set()  # Should not see other org's company
 
 
-def test_workflow_rejects_non_running_run_resumption(
+@pytest.mark.asyncio
+async def test_workflow_rejects_non_running_run_resumption(
     service_session_factory: sessionmaker[Session],
     org_id: str,
 ) -> None:
@@ -168,7 +169,7 @@ def test_workflow_rejects_non_running_run_resumption(
         },
     )
 
-    result = runner.run(context)
+    result = await runner.run(context)
 
     # Should fail because run is not in "running" state
     assert result.status.value == "failed"

@@ -13,14 +13,14 @@ from app.workflows.states import WorkflowStatus
 class RegisteredWorkflow(Workflow):
     name = "registered"
 
-    def execute(self, context: WorkflowContext) -> WorkflowResult:
+    async def execute(self, context: WorkflowContext) -> WorkflowResult:
         return WorkflowResult(workflow_name=context.workflow_name, status=WorkflowStatus.SUCCEEDED)
 
 
 class NamelessWorkflow(Workflow):
     name = ""
 
-    def execute(self, context: WorkflowContext) -> WorkflowResult:
+    async def execute(self, context: WorkflowContext) -> WorkflowResult:
         return WorkflowResult(workflow_name=context.workflow_name, status=WorkflowStatus.SUCCEEDED)
 
 

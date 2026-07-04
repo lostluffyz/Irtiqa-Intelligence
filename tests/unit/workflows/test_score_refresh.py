@@ -183,11 +183,12 @@ def make_workflow(**overrides: Any) -> tuple[ScoreRefreshWorkflow, AgentRunServi
     return ScoreRefreshWorkflow(**services), agent_run_service, score_service
 
 
-def test_score_refresh_workflow_creates_append_only_score_and_result_ids() -> None:
+@pytest.mark.asyncio
+async def test_score_refresh_workflow_creates_append_only_score_and_result_ids() -> None:
     workflow, agent_run_service, score_service = make_workflow()
     context = WorkflowContext(workflow_name="score_refresh", company_id=COMPANY_ID, contact_id=CONTACT_ID)
 
-    result = workflow.execute(context)
+    result = await workflow.execute(context)
 
     assert result.status == WorkflowStatus.SUCCEEDED
     assert result.company_id == COMPANY_ID
@@ -204,11 +205,12 @@ def test_score_refresh_workflow_creates_append_only_score_and_result_ids() -> No
     assert score_service.created[0]["technology_id"] == TECHNOLOGY_ID
 
 
-def test_score_refresh_workflow_can_score_company_only_target() -> None:
+@pytest.mark.asyncio
+async def test_score_refresh_workflow_can_score_company_only_target() -> None:
     workflow, _, score_service = make_workflow()
     context = WorkflowContext(workflow_name="score_refresh", company_id=COMPANY_ID)
 
-    result = workflow.execute(context)
+    result = await workflow.execute(context)
 
     assert result.status == WorkflowStatus.SUCCEEDED
     assert result.company_id == COMPANY_ID
@@ -216,7 +218,8 @@ def test_score_refresh_workflow_can_score_company_only_target() -> None:
     assert score_service.created[0]["contact_id"] is None
 
 
-def test_score_refresh_workflow_marks_agent_run_failed_for_scoring_error() -> None:
+@pytest.mark.asyncio
+async def test_score_refresh_workflow_marks_agent_run_failed_for_scoring_error() -> None:
     workflow, agent_run_service, _ = make_workflow(
         technology_service=TechnologyServiceDouble([]),
         intent_signal_service=IntentSignalServiceDouble([]),
@@ -228,14 +231,15 @@ def test_score_refresh_workflow_marks_agent_run_failed_for_scoring_error() -> No
     )
 
     with pytest.raises(WorkflowError) as exc:
-        workflow.execute(context)
+        await workflow.execute(context)
 
     assert exc.value.code == "irtiqa.workflow_error"
     assert agent_run_service.failed[0][0] == AGENT_RUN_ID
     assert "intent_lookback_days" in agent_run_service.failed[0][1]
 
 
-def test_score_refresh_workflow_rejects_mismatched_company_and_contact() -> None:
+@pytest.mark.asyncio
+async def test_score_refresh_workflow_rejects_mismatched_company_and_contact() -> None:
     workflow, agent_run_service, _ = make_workflow()
     context = WorkflowContext(
         workflow_name="score_refresh",
@@ -244,7 +248,7 @@ def test_score_refresh_workflow_rejects_mismatched_company_and_contact() -> None
     )
 
     with pytest.raises(WorkflowError) as exc:
-        workflow.execute(context)
+        await workflow.execute(context)
 
     assert exc.value.details["workflow_name"] == "score_refresh"
     assert agent_run_service.failed == []

@@ -28,7 +28,7 @@ class DiscoveryPipelineWorkflow(Workflow):
         super().__init__(**services)
         self.logger = get_logger(f"workflows.{self.name}")
 
-    def execute(self, context: WorkflowContext) -> WorkflowResult:
+    async def execute(self, context: WorkflowContext) -> WorkflowResult:
         normalized_company_id = context.company_id
         normalized_contact_id = context.contact_id
         organization_id = self._organization_id(context)
@@ -78,7 +78,7 @@ class DiscoveryPipelineWorkflow(Workflow):
                 },
             )
             discovery_agent = DiscoveryAgent(**self.services)
-            agent_result = self._run_async(discovery_agent.execute(agent_context))
+            agent_result = await discovery_agent.execute(agent_context)
 
             if agent_result.status != AGENT_STATUS_SUCCEEDED:
                 run_service.fail_run(
@@ -210,17 +210,6 @@ class DiscoveryPipelineWorkflow(Workflow):
             )
             self._mark_failed(run_id, organization_id, error)
             raise error from exc
-
-    @staticmethod
-    def _run_async(coro) -> Any:
-        import asyncio
-
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.run(coro)
-        with asyncio.Runner() as runner:
-            return runner.run(coro)
 
     def _service(self, key: str, service_type: type[ServiceT]) -> ServiceT:
         service = self.services.get(key)

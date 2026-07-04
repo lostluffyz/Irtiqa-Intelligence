@@ -16,7 +16,8 @@ from app.workflows.score_refresh import ScoreRefreshWorkflow
 from app.workflows.states import WorkflowStatus
 
 
-def test_score_refresh_creates_evidence(session) -> None:
+@pytest.mark.asyncio
+async def test_score_refresh_creates_evidence(session) -> None:
     """Score refresh workflow creates evidence records linking the score
     to contributing technologies and intent signals."""
     # Seed: need a company with technologies and intent signals
@@ -166,7 +167,7 @@ def test_score_refresh_creates_evidence(session) -> None:
             organization_id=org_id,
             options={"intent_lookback_days": 365},
         )
-        result = workflow.execute(context)
+        result = await workflow.execute(context)
 
         assert result.status == WorkflowStatus.SUCCEEDED
         assert "intelligence_scores" in result.output_ids

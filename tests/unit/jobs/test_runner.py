@@ -195,7 +195,7 @@ async def test_runner_dispatches_workflow_job(
     )
 
     mock_workflow_cls = MagicMock()
-    mock_workflow_cls.return_value.execute.return_value = real_result
+    mock_workflow_cls.return_value.execute = AsyncMock(return_value=real_result)
     mock_workflow_registry.get.return_value = mock_workflow_cls
 
     runner = JobRunner(

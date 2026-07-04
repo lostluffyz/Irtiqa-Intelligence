@@ -158,7 +158,7 @@ class JobRunner:
             options=payload.get("options", {}),
         )
 
-        result = runner.run(context)
+        result = await runner.run(context)
 
         from app.workflows.states import WorkflowStatus as WfStatus
 

@@ -132,7 +132,8 @@ def _seed_website(client: TestClient, company_id: str) -> str:
     return response.json()["id"]
 
 
-def test_pipeline_through_job_system(
+@pytest.mark.asyncio
+async def test_pipeline_through_job_system(
     api_session_factory: sessionmaker[Session],
     test_org: Organization,
 ) -> None:
@@ -196,7 +197,7 @@ def test_pipeline_through_job_system(
             company_id=company_id,
             organization_id=test_org.id,
         )
-        result = runner.run(context)
+        result = await runner.run(context)
 
         from app.workflows.states import WorkflowStatus as WfStatus
 
@@ -306,7 +307,8 @@ def _make_result() -> AgentResult:
     )
 
 
-def test_pipeline_real_agents(
+@pytest.mark.asyncio
+async def test_pipeline_real_agents(
     api_session_factory: sessionmaker[Session],
     test_org: Organization,
 ) -> None:
@@ -338,10 +340,8 @@ def test_pipeline_real_agents(
     session.close()
 
     # The DeepScraperAgent fetches robots.txt first, then the page.
-    # Use patch to intercept httpx.AsyncClient at the class level so the
-    # mock applies regardless of which event loop the agent runs in.
-    # The agent constructs httpx.AsyncClient() inside _run_async() which
-    # may create a new event loop — class-level patch survives that.
+    # The pipeline is now fully async, so we mock httpx.AsyncClient at
+    # the class level and the mock is inherited by all agents.
     from unittest.mock import MagicMock
 
     html_page = """
@@ -405,7 +405,7 @@ def test_pipeline_real_agents(
 
     # ── Execute pipeline (all 5 agents run for real) ──────────────────
     with patch("httpx.AsyncClient", return_value=mock_client):
-        result = runner.run(context)
+        result = await runner.run(context)
 
     # ── Verify workflow execution ─────────────────────────────────────
     from app.workflows.states import WorkflowStatus as WfStatus

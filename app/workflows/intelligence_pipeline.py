@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Any, TypeVar, cast
 
@@ -41,7 +40,7 @@ class IntelligencePipelineWorkflow(Workflow):
         super().__init__(**services)
         self.logger = get_logger(f"workflows.{self.name}")
 
-    def execute(self, context: WorkflowContext) -> WorkflowResult:
+    async def execute(self, context: WorkflowContext) -> WorkflowResult:
         normalized_company_id: str | None = context.company_id
         normalized_contact_id: str | None = context.contact_id
         step_results: list[WorkflowStepResult] = []
@@ -72,7 +71,7 @@ class IntelligencePipelineWorkflow(Workflow):
                 ),
             )
             scraper = DeepScraperAgent(**self.services)
-            scraper_result = self._run_async(scraper.execute(deep_context))
+            scraper_result = await scraper.execute(deep_context)
             if scraper_result.status != AGENT_STATUS_SUCCEEDED:
                 raise WorkflowError(
                     f"Deep Scraper Agent failed: {scraper_result.summary}",
@@ -103,7 +102,7 @@ class IntelligencePipelineWorkflow(Workflow):
                 options=dict(context.options),
             )
             technographic = TechnographicAgent(**self.services)
-            technographic_result = self._run_async(technographic.execute(tech_context))
+            technographic_result = await technographic.execute(tech_context)
             if technographic_result.status != AGENT_STATUS_SUCCEEDED:
                 raise WorkflowError(
                     f"Technographic Agent failed: {technographic_result.summary}",
@@ -134,7 +133,7 @@ class IntelligencePipelineWorkflow(Workflow):
                 options=dict(context.options),
             )
             intent_signal = IntentSignalAgent(**self.services)
-            signal_result = self._run_async(intent_signal.execute(signal_context))
+            signal_result = await intent_signal.execute(signal_context)
             if signal_result.status != AGENT_STATUS_SUCCEEDED:
                 raise WorkflowError(
                     f"Intent Signal Agent failed: {signal_result.summary}",
@@ -166,7 +165,7 @@ class IntelligencePipelineWorkflow(Workflow):
                 options=dict(context.options),
             )
             scoring = IntelligenceScoringAgent(**self.services)
-            score_result = self._run_async(scoring.execute(score_context))
+            score_result = await scoring.execute(score_context)
             if score_result.status != AGENT_STATUS_SUCCEEDED:
                 raise WorkflowError(
                     f"Intelligence Scoring Agent failed: {score_result.summary}",
@@ -198,7 +197,7 @@ class IntelligencePipelineWorkflow(Workflow):
                 options=dict(context.options),
             )
             personalization = PersonalizationAgent(**self.services)
-            pers_result = self._run_async(personalization.execute(pers_context))
+            pers_result = await personalization.execute(pers_context)
             if pers_result.status != AGENT_STATUS_SUCCEEDED:
                 raise WorkflowError(
                     f"Personalization Agent failed: {pers_result.summary}",
@@ -254,29 +253,6 @@ class IntelligencePipelineWorkflow(Workflow):
                 },
                 cause=exc,
             ) from exc
-
-    @staticmethod
-    def _run_async(coro) -> Any:
-        """Run a coroutine synchronously.
-
-        When called outside a running event loop (the common production
-        path where WorkflowRunner.execute() is called synchronously),
-        uses ``asyncio.run()``.
-
-        When called inside a running event loop (e.g. from a
-        ``JobRunner`` test that uses ``asyncio.run()``), creates an
-        isolated ``asyncio.Runner`` to avoid the nested-loop restriction.
-        ``asyncio.Runner`` (Python 3.11+) properly cancels pending tasks
-        and shuts down async generators before closing the loop.
-        """
-        import asyncio
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.run(coro)
-        # Running inside an event loop — use an isolated Runner.
-        with asyncio.Runner() as runner:
-            return runner.run(coro)
 
     def _service(self, key: str, service_type: type[ServiceT]) -> ServiceT:
         service = self.services.get(key)

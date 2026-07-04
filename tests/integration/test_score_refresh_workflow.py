@@ -62,7 +62,8 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def test_score_refresh_workflow_persists_score_and_agent_run(
+@pytest.mark.asyncio
+async def test_score_refresh_workflow_persists_score_and_agent_run(
     service_database: sessionmaker[Session],
     org_id: str,
 ) -> None:
@@ -122,7 +123,7 @@ def test_score_refresh_workflow_persists_score_and_agent_run(
         agent_run_service=agent_run_service,
     )
 
-    first_result = runner.run(
+    first_result = await runner.run(
         WorkflowContext(
             workflow_name="score_refresh",
             company_id=company.id,
@@ -130,7 +131,7 @@ def test_score_refresh_workflow_persists_score_and_agent_run(
             organization_id=org_id,
         )
     )
-    second_result = runner.run(
+    second_result = await runner.run(
         WorkflowContext(
             workflow_name="score_refresh",
             company_id=company.id,
@@ -159,7 +160,8 @@ def test_score_refresh_workflow_persists_score_and_agent_run(
     assert all(run.finished_at is not None for run in agent_runs)
 
 
-def test_score_refresh_workflow_returns_structured_failure_for_missing_target(
+@pytest.mark.asyncio
+async def test_score_refresh_workflow_returns_structured_failure_for_missing_target(
     service_database: sessionmaker[Session],
 ) -> None:
     registry = WorkflowRegistry()
@@ -174,7 +176,7 @@ def test_score_refresh_workflow_returns_structured_failure_for_missing_target(
         agent_run_service=AgentRunService(),
     )
 
-    result = runner.run(
+    result = await runner.run(
         WorkflowContext(
             workflow_name="score_refresh",
             company_id="00000000-0000-0000-0000-000000000000",

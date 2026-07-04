@@ -16,7 +16,7 @@ class WorkflowRunner:
         self.services = dict(services)
         self.logger = get_logger("workflows.runner")
 
-    def run(self, context: WorkflowContext) -> WorkflowResult:
+    async def run(self, context: WorkflowContext) -> WorkflowResult:
         self.logger.info(
             "Starting workflow",
             extra={
@@ -35,7 +35,7 @@ class WorkflowRunner:
         try:
             workflow_type = self.registry.get(context.workflow_name)
             workflow = workflow_type(**self.services)
-            completed = workflow.execute(context)
+            completed = await workflow.execute(context)
             self.logger.info(
                 "Completed workflow",
                 extra={

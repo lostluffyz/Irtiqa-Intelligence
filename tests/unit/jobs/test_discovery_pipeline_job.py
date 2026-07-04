@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -99,7 +99,7 @@ async def test_discovery_pipeline_job_dispatches_workflow() -> None:
 
     result = _succeeded_result()
     mock_workflow_cls = MagicMock()
-    mock_workflow_cls.return_value.execute.return_value = result
+    mock_workflow_cls.return_value.execute = AsyncMock(return_value=result)
     mock_workflow_registry.get.return_value = mock_workflow_cls
 
     runner = _build_runner(mock_job_service, mock_workflow_registry)
@@ -128,7 +128,7 @@ async def test_discovery_pipeline_job_reports_failure() -> None:
 
     result = _failed_result()
     mock_workflow_cls = MagicMock()
-    mock_workflow_cls.return_value.execute.return_value = result
+    mock_workflow_cls.return_value.execute = AsyncMock(return_value=result)
     mock_workflow_registry.get.return_value = mock_workflow_cls
 
     runner = _build_runner(mock_job_service, mock_workflow_registry)
@@ -155,7 +155,7 @@ async def test_discovery_pipeline_job_preserves_tenant_isolation() -> None:
 
     result = _succeeded_result()
     mock_workflow_cls = MagicMock()
-    mock_workflow_cls.return_value.execute.return_value = result
+    mock_workflow_cls.return_value.execute = AsyncMock(return_value=result)
     mock_workflow_registry.get.return_value = mock_workflow_cls
 
     runner = _build_runner(mock_job_service, mock_workflow_registry)
@@ -227,7 +227,7 @@ async def test_discovery_pipeline_job_invokes_workflow_with_correct_options() ->
 
     result = _succeeded_result()
     mock_workflow_cls = MagicMock()
-    mock_workflow_cls.return_value.execute.return_value = result
+    mock_workflow_cls.return_value.execute = AsyncMock(return_value=result)
     mock_workflow_registry.get.return_value = mock_workflow_cls
 
     runner = _build_runner(mock_job_service, mock_workflow_registry)
@@ -254,7 +254,7 @@ async def test_discovery_pipeline_job_updates_statistics_via_output_ids() -> Non
 
     result = _succeeded_result()
     mock_workflow_cls = MagicMock()
-    mock_workflow_cls.return_value.execute.return_value = result
+    mock_workflow_cls.return_value.execute = AsyncMock(return_value=result)
     mock_workflow_registry.get.return_value = mock_workflow_cls
 
     runner = _build_runner(mock_job_service, mock_workflow_registry)

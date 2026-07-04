@@ -174,7 +174,8 @@ def _context(*, org_id: str, search_id: str, placeholder_company_id: str) -> Wor
     )
 
 
-def test_discovery_pipeline_successfully_creates_companies_and_updates_statistics(
+@pytest.mark.asyncio
+async def test_discovery_pipeline_successfully_creates_companies_and_updates_statistics(
     service_database: sessionmaker[Session],
     org_id: str,
 ) -> None:
@@ -191,7 +192,7 @@ def test_discovery_pipeline_successfully_creates_companies_and_updates_statistic
         discovery_run_service=DiscoveryRunService(),
     )
 
-    result = runner.run(_context(org_id=org_id, search_id=search.id, placeholder_company_id=placeholder.id))
+    result = await runner.run(_context(org_id=org_id, search_id=search.id, placeholder_company_id=placeholder.id))
 
     assert result.status == WorkflowStatus.SUCCEEDED
     assert len(result.output_ids["companies"]) == 1
@@ -215,7 +216,8 @@ def test_discovery_pipeline_successfully_creates_companies_and_updates_statistic
     assert any(company.domain == "new.example" and company.status == "needs_review" for company in companies)
 
 
-def test_discovery_pipeline_skips_duplicate_companies_by_domain(
+@pytest.mark.asyncio
+async def test_discovery_pipeline_skips_duplicate_companies_by_domain(
     service_database: sessionmaker[Session],
     org_id: str,
 ) -> None:
@@ -232,7 +234,7 @@ def test_discovery_pipeline_skips_duplicate_companies_by_domain(
         discovery_run_service=DiscoveryRunService(),
     )
 
-    result = runner.run(_context(org_id=org_id, search_id=search.id, placeholder_company_id=placeholder.id))
+    result = await runner.run(_context(org_id=org_id, search_id=search.id, placeholder_company_id=placeholder.id))
 
     assert result.status == WorkflowStatus.SUCCEEDED
     assert result.output_ids["companies"] == []
@@ -247,7 +249,8 @@ def test_discovery_pipeline_skips_duplicate_companies_by_domain(
     assert sum(1 for company in companies if company.domain == existing.domain) == 1
 
 
-def test_discovery_pipeline_enforces_tenant_isolation(
+@pytest.mark.asyncio
+async def test_discovery_pipeline_enforces_tenant_isolation(
     service_database: sessionmaker[Session],
     org_id: str,
     other_org_id: str,
@@ -265,14 +268,15 @@ def test_discovery_pipeline_enforces_tenant_isolation(
         discovery_run_service=DiscoveryRunService(),
     )
 
-    result = runner.run(_context(org_id=org_id, search_id=other_search.id, placeholder_company_id=placeholder.id))
+    result = await runner.run(_context(org_id=org_id, search_id=other_search.id, placeholder_company_id=placeholder.id))
 
     assert result.status == WorkflowStatus.FAILED
     assert result.error is not None
     assert result.error["code"] == "irtiqa.workflow_error"
 
 
-def test_discovery_pipeline_handles_partial_provider_failure(
+@pytest.mark.asyncio
+async def test_discovery_pipeline_handles_partial_provider_failure(
     service_database: sessionmaker[Session],
     org_id: str,
 ) -> None:
@@ -292,7 +296,7 @@ def test_discovery_pipeline_handles_partial_provider_failure(
         discovery_run_service=DiscoveryRunService(),
     )
 
-    result = runner.run(_context(org_id=org_id, search_id=search.id, placeholder_company_id=placeholder.id))
+    result = await runner.run(_context(org_id=org_id, search_id=search.id, placeholder_company_id=placeholder.id))
 
     assert result.status == WorkflowStatus.SUCCEEDED
 
@@ -308,7 +312,8 @@ def test_discovery_pipeline_handles_partial_provider_failure(
     assert persisted_search.total_discovered == 1
 
 
-def test_discovery_pipeline_succeeds_with_empty_results(
+@pytest.mark.asyncio
+async def test_discovery_pipeline_succeeds_with_empty_results(
     service_database: sessionmaker[Session],
     org_id: str,
 ) -> None:
@@ -325,7 +330,7 @@ def test_discovery_pipeline_succeeds_with_empty_results(
         discovery_run_service=DiscoveryRunService(),
     )
 
-    result = runner.run(_context(org_id=org_id, search_id=search.id, placeholder_company_id=placeholder.id))
+    result = await runner.run(_context(org_id=org_id, search_id=search.id, placeholder_company_id=placeholder.id))
 
     assert result.status == WorkflowStatus.SUCCEEDED
     assert result.output_ids["companies"] == []
@@ -341,7 +346,8 @@ def test_discovery_pipeline_succeeds_with_empty_results(
     assert persisted_search.total_discovered == 0
 
 
-def test_discovery_pipeline_records_failure_path(
+@pytest.mark.asyncio
+async def test_discovery_pipeline_records_failure_path(
     service_database: sessionmaker[Session],
     org_id: str,
 ) -> None:
@@ -363,7 +369,7 @@ def test_discovery_pipeline_records_failure_path(
         discovery_run_service=DiscoveryRunService(),
     )
 
-    result = runner.run(_context(org_id=org_id, search_id=search.id, placeholder_company_id=placeholder.id))
+    result = await runner.run(_context(org_id=org_id, search_id=search.id, placeholder_company_id=placeholder.id))
 
     assert result.status == WorkflowStatus.FAILED
     assert result.error is not None
@@ -381,7 +387,8 @@ def test_discovery_pipeline_records_failure_path(
     assert all(company.domain != "failure.example" for company in companies)
 
 
-def test_discovery_pipeline_resumes_existing_run_when_provided(
+@pytest.mark.asyncio
+async def test_discovery_pipeline_resumes_existing_run_when_provided(
     service_database: sessionmaker[Session],
     org_id: str,
 ) -> None:
@@ -414,7 +421,7 @@ def test_discovery_pipeline_resumes_existing_run_when_provided(
         },
     )
 
-    result = runner.run(context)
+    result = await runner.run(context)
 
     assert result.status == WorkflowStatus.SUCCEEDED
     assert len(result.output_ids["companies"]) == 1
@@ -429,7 +436,8 @@ def test_discovery_pipeline_resumes_existing_run_when_provided(
     assert runs[0].status == "succeeded"
 
 
-def test_discovery_pipeline_creates_run_when_not_provided(
+@pytest.mark.asyncio
+async def test_discovery_pipeline_creates_run_when_not_provided(
     service_database: sessionmaker[Session],
     org_id: str,
 ) -> None:
@@ -459,7 +467,7 @@ def test_discovery_pipeline_creates_run_when_not_provided(
         },
     )
 
-    result = runner.run(context)
+    result = await runner.run(context)
 
     assert result.status == WorkflowStatus.SUCCEEDED
     assert len(result.output_ids["companies"]) == 1
@@ -472,7 +480,8 @@ def test_discovery_pipeline_creates_run_when_not_provided(
     assert runs[0].status == "succeeded"
 
 
-def test_discovery_pipeline_validates_existing_run_organization_id(
+@pytest.mark.asyncio
+async def test_discovery_pipeline_validates_existing_run_organization_id(
     service_database: sessionmaker[Session],
     org_id: str,
     other_org_id: str,
@@ -507,14 +516,15 @@ def test_discovery_pipeline_validates_existing_run_organization_id(
         },
     )
 
-    result = runner.run(context)
+    result = await runner.run(context)
 
     # Workflow should fail due to tenant isolation
     assert result.status == WorkflowStatus.FAILED
     assert result.error is not None
 
 
-def test_discovery_pipeline_supports_organization_only_context(
+@pytest.mark.asyncio
+async def test_discovery_pipeline_supports_organization_only_context(
     service_database: sessionmaker[Session],
     org_id: str,
 ) -> None:
@@ -542,7 +552,7 @@ def test_discovery_pipeline_supports_organization_only_context(
         },
     )
 
-    result = runner.run(context)
+    result = await runner.run(context)
 
     assert result.status == WorkflowStatus.SUCCEEDED
     assert len(result.output_ids["companies"]) == 1

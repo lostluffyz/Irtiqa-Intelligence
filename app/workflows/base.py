@@ -14,5 +14,5 @@ class Workflow(ABC):
         self.services = dict(services)
 
     @abstractmethod
-    def execute(self, context: WorkflowContext) -> WorkflowResult:
+    async def execute(self, context: WorkflowContext) -> WorkflowResult:
         raise NotImplementedError

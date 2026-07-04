@@ -52,7 +52,7 @@ class ScoreRefreshWorkflow(Workflow):
         self.logger = get_logger(f"workflows.{self.name}")
         self.policy = DeterministicScoreRefreshPolicy()
 
-    def execute(self, context: WorkflowContext) -> WorkflowResult:
+    async def execute(self, context: WorkflowContext) -> WorkflowResult:
         agent_run: AgentRun | None = None
         normalized_company_id: str | None = context.company_id
         normalized_contact_id: str | None = context.contact_id

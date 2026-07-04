@@ -38,7 +38,8 @@ def _mock_services() -> dict:
     }
 
 
-def test_pipeline_step_execution() -> None:
+@pytest.mark.asyncio
+async def test_pipeline_step_execution() -> None:
     """Each agent executes correctly when called sequentially in the pipeline."""
     services = _mock_services()
     services["company_service"].get_required.return_value = MagicMock(id="c" * 36)
@@ -65,7 +66,7 @@ def test_pipeline_step_execution() -> None:
             workflow_name="intelligence_pipeline",
             company_id="c" * 36,
         )
-        result = workflow.execute(context)
+        result = await workflow.execute(context)
 
     assert result.status == WorkflowStatus.SUCCEEDED
     assert result.output_ids["websites"] == ["w1"]
@@ -75,7 +76,8 @@ def test_pipeline_step_execution() -> None:
     assert result.output_ids["outreach_messages"] == ["m1"]
 
 
-def test_pipeline_fails_on_step_failure() -> None:
+@pytest.mark.asyncio
+async def test_pipeline_fails_on_step_failure() -> None:
     """Pipeline stops and returns FAILED when an agent fails."""
     services = _mock_services()
     services["company_service"].get_required.return_value = MagicMock(id="c" * 36)
@@ -91,10 +93,11 @@ def test_pipeline_fails_on_step_failure() -> None:
             company_id="c" * 36,
         )
         with pytest.raises(WorkflowError, match="Deep Scraper Agent failed"):
-            workflow.execute(context)
+            await workflow.execute(context)
 
 
-def test_pipeline_aggregates_output_ids() -> None:
+@pytest.mark.asyncio
+async def test_pipeline_aggregates_output_ids() -> None:
     """WorkflowResult contains output_ids from all 5 steps."""
     services = _mock_services()
     services["company_service"].get_required.return_value = MagicMock(id="c" * 36)
@@ -121,7 +124,7 @@ def test_pipeline_aggregates_output_ids() -> None:
             workflow_name="intelligence_pipeline",
             company_id="c" * 36,
         )
-        result = workflow.execute(context)
+        result = await workflow.execute(context)
 
     assert len(result.output_ids["websites"]) == 2
     assert len(result.output_ids["technologies"]) == 1
@@ -130,7 +133,8 @@ def test_pipeline_aggregates_output_ids() -> None:
     assert len(result.output_ids["outreach_messages"]) == 2
 
 
-def test_pipeline_agent_run_ids() -> None:
+@pytest.mark.asyncio
+async def test_pipeline_agent_run_ids() -> None:
     """WorkflowResult contains 5 agent_run_ids (one per step)."""
     services = _mock_services()
     services["company_service"].get_required.return_value = MagicMock(id="c" * 36)
@@ -157,13 +161,14 @@ def test_pipeline_agent_run_ids() -> None:
             workflow_name="intelligence_pipeline",
             company_id="c" * 36,
         )
-        result = workflow.execute(context)
+        result = await workflow.execute(context)
 
     assert len(result.agent_run_ids) == 5
     assert result.agent_run_ids == ["r1" + "a" * 34, "r2" + "a" * 34, "r3" + "a" * 34, "r4" + "a" * 34, "r5" + "a" * 34]
 
 
-def test_pipeline_handles_service_error() -> None:
+@pytest.mark.asyncio
+async def test_pipeline_handles_service_error() -> None:
     """Pipeline wraps service errors in WorkflowError."""
     services = _mock_services()
     from app.core.errors import EntityNotFoundError
@@ -182,10 +187,11 @@ def test_pipeline_handles_service_error() -> None:
         company_id="00000000-0000-0000-0000-000000000000",
     )
     with pytest.raises(WorkflowError, match="Intelligence pipeline failed"):
-        workflow.execute(context)
+        await workflow.execute(context)
 
 
-def test_pipeline_evidence_forwarded_to_agents() -> None:
+@pytest.mark.asyncio
+async def test_pipeline_evidence_forwarded_to_agents() -> None:
     """Each agent receives workflow_name='intelligence_pipeline' in context."""
     services = _mock_services()
     services["company_service"].get_required.return_value = MagicMock(id="c" * 36)
@@ -212,7 +218,7 @@ def test_pipeline_evidence_forwarded_to_agents() -> None:
             workflow_name="intelligence_pipeline",
             company_id="c" * 36,
         )
-        workflow.execute(context)
+        await workflow.execute(context)
 
     for mock in [mock_ds, mock_tg, mock_is, mock_isc, mock_pa]:
         call_context = mock.call_args[0][0]
